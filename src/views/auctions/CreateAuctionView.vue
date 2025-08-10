@@ -9,7 +9,7 @@
       <!-- Basic Information -->
       <div class="form-section">
         <h3>Basic Information</h3>
-        
+
         <div class="form-group">
           <label for="title">Auction Title *</label>
           <input
@@ -84,13 +84,13 @@
       <!-- Pricing -->
       <div class="form-section">
         <h3>Pricing & Duration</h3>
-        
+
         <div class="form-row">
           <div class="form-group">
-            <label for="startingPrice">Starting Price ($) *</label>
+            <label for="starting_price">Starting Price ($) *</label>
             <input
-              id="startingPrice"
-              v-model.number="form.startingPrice"
+              id="starting_price"
+              v-model.number="form.starting_price"
               type="number"
               min="0"
               step="0.01"
@@ -102,10 +102,10 @@
           </div>
 
           <div class="form-group">
-            <label for="reservePrice">Reserve Price ($)</label>
+            <label for="reserve_price">Reserve Price ($)</label>
             <input
-              id="reservePrice"
-              v-model.number="form.reservePrice"
+              id="reserve_price"
+              v-model.number="form.reserve_price"
               type="number"
               min="0"
               step="0.01"
@@ -136,10 +136,10 @@
           </div>
 
           <div class="form-group">
-            <label for="buyNowPrice">Buy Now Price ($)</label>
+            <label for="buy_now_price">Buy Now Price ($)</label>
             <input
-              id="buyNowPrice"
-              v-model.number="form.buyNowPrice"
+              id="buy_now_price"
+              v-model.number="form.buy_now_price"
               type="number"
               min="0"
               step="0.01"
@@ -154,7 +154,7 @@
       <!-- Images -->
       <div class="form-section">
         <h3>Images</h3>
-        
+
         <div class="form-group">
           <label for="images">Upload Images</label>
           <div class="image-upload">
@@ -176,11 +176,7 @@
         </div>
 
         <div v-if="form.images.length > 0" class="image-preview">
-          <div
-            v-for="(image, index) in form.images"
-            :key="index"
-            class="image-item"
-          >
+          <div v-for="(image, index) in form.images" :key="index" class="image-item">
             <img :src="image.preview" :alt="`Image ${index + 1}`" />
             <button
               type="button"
@@ -197,7 +193,7 @@
       <!-- Shipping & Location -->
       <div class="form-section">
         <h3>Shipping & Location</h3>
-        
+
         <div class="form-row">
           <div class="form-group">
             <label for="location">Item Location *</label>
@@ -229,11 +225,7 @@
 
         <div class="form-group">
           <label>
-            <input
-              type="checkbox"
-              v-model="form.freeShipping"
-              :disabled="loading"
-            />
+            <input type="checkbox" v-model="form.freeShipping" :disabled="loading" />
             Offer free shipping
           </label>
         </div>
@@ -242,7 +234,7 @@
       <!-- Terms & Conditions -->
       <div class="form-section">
         <h3>Terms & Conditions</h3>
-        
+
         <div class="form-group">
           <label for="terms">Additional Terms</label>
           <textarea
@@ -257,32 +249,19 @@
 
         <div class="form-group">
           <label>
-            <input
-              type="checkbox"
-              v-model="form.agreeToTerms"
-              required
-              :disabled="loading"
-            />
-            I agree to the <a href="#" class="link">Terms of Service</a> and <a href="#" class="link">Auction Rules</a>
+            <input type="checkbox" v-model="form.agreeToTerms" required :disabled="loading" />
+            I agree to the <a href="#" class="link">Terms of Service</a> and
+            <a href="#" class="link">Auction Rules</a>
           </label>
         </div>
       </div>
 
       <!-- Submit Buttons -->
       <div class="form-actions">
-        <button
-          type="button"
-          @click="saveDraft"
-          :disabled="loading"
-          class="btn btn-outline"
-        >
+        <button type="button" @click="saveDraft" :disabled="loading" class="btn btn-outline">
           Save as Draft
         </button>
-        <button
-          type="submit"
-          :disabled="loading || !form.agreeToTerms"
-          class="btn btn-primary"
-        >
+        <button type="submit" :disabled="loading || !form.agreeToTerms" class="btn btn-primary">
           <span v-if="loading" class="loading-spinner"></span>
           {{ loading ? 'Creating...' : 'Create Auction' }}
         </button>
@@ -306,16 +285,16 @@ const form = reactive({
   description: '',
   category: '',
   condition: '',
-  startingPrice: 0,
-  reservePrice: 0,
-  buyNowPrice: 0,
+  starting_price: 0,
+  reserve_price: 0,
+  buy_now_price: 0,
   duration: '',
   location: '',
   shippingCost: 0,
   freeShipping: false,
   terms: '',
   agreeToTerms: false,
-  images: [] as Array<{ file: File; preview: string }>
+  images: [] as Array<{ file: File; preview: string }>,
 })
 
 const handleImageUpload = (event: Event) => {
@@ -323,7 +302,7 @@ const handleImageUpload = (event: Event) => {
   const files = target.files
 
   if (files) {
-    Array.from(files).forEach(file => {
+    Array.from(files).forEach((file) => {
       if (file.size > 5 * 1024 * 1024) {
         alert('File size must be less than 5MB')
         return
@@ -338,7 +317,7 @@ const handleImageUpload = (event: Event) => {
       reader.onload = (e) => {
         form.images.push({
           file,
-          preview: e.target?.result as string
+          preview: e.target?.result as string,
         })
       }
       reader.readAsDataURL(file)
@@ -358,27 +337,28 @@ const createAuction = async () => {
 
   loading.value = true
   try {
+    console.log(form.duration)
     const auctionData = {
       title: form.title,
       description: form.description,
       category: form.category,
       condition: form.condition,
-      startingPrice: form.startingPrice,
-      reservePrice: form.reservePrice || undefined,
-      buyNowPrice: form.buyNowPrice || undefined,
+      starting_price: form.starting_price,
+      reserve_price: form.reserve_price || undefined,
+      buy_now_price: form.buy_now_price || undefined,
       duration: parseInt(form.duration),
-      endDate: new Date(Date.now() + parseInt(form.duration) * 24 * 60 * 60 * 1000).toISOString(),
+      end_date: new Date(Date.now() + parseInt(form.duration) * 24 * 60 * 60 * 1000).toISOString(),
       location: form.location,
       shippingCost: form.freeShipping ? 0 : form.shippingCost,
       terms: form.terms,
-      images: form.images.map(img => img.file)
+      images: form.images.map((img) => img.file),
     }
-
+    console.log(new Date(Date.now() + parseInt(form.duration) * 24 * 60 * 60 * 1000).toISOString())
     await auctionStore.createAuction(auctionData)
     router.push('/my-auctions')
   } catch (error) {
     console.error('Failed to create auction:', error)
-    alert('Failed to create auction. Please try again.')
+    alert('Failed to create auction. Please try again.' + error)
   } finally {
     loading.value = false
   }
@@ -634,15 +614,15 @@ const saveDraft = async () => {
   .create-auction {
     padding: 1rem;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .form-actions {
     flex-direction: column;
   }
-  
+
   .image-preview {
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   }

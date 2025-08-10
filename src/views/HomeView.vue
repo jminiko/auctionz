@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useAuctionStore, type Auction } from '@/stores/auction'
+import HeaderStateController from '@/components/HeaderStateController.vue'
 
 const auctionStore = useAuctionStore()
 
@@ -11,19 +12,19 @@ const categories = ref([
   { name: 'Collectibles', icon: '🏆', count: 650 },
   { name: 'Jewelry', icon: '💎', count: 420 },
   { name: 'Vehicles', icon: '🚗', count: 180 },
-  { name: 'Real Estate', icon: '🏠', count: 95 }
+  { name: 'Real Estate', icon: '🏠', count: 95 },
 ])
 
 const formatTimeLeft = (endDate: string) => {
   const end = new Date(endDate)
   const now = new Date()
   const diff = end.getTime() - now.getTime()
-  
+
   if (diff <= 0) return 'Ended'
-  
+
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-  
+
   if (days > 0) return `${days}d ${hours}h`
   if (hours > 0) return `${hours}h`
   return 'Less than 1h'
@@ -41,6 +42,9 @@ onMounted(async () => {
 
 <template>
   <div class="home">
+    <!-- Header State Controller (for demonstration) -->
+    <HeaderStateController />
+
     <!-- Hero Section -->
     <section class="hero">
       <div class="hero-content">
@@ -49,8 +53,8 @@ onMounted(async () => {
           <span class="highlight">AuctionZ</span>
         </h1>
         <p class="hero-subtitle">
-          The premier online auction platform where buyers and sellers connect. 
-          Bid on unique items or create your own auctions to reach thousands of potential buyers.
+          The premier online auction platform where buyers and sellers connect. Bid on unique items
+          or create your own auctions to reach thousands of potential buyers.
         </p>
         <div class="hero-actions">
           <router-link to="/auctions" class="btn btn-primary btn-large">
@@ -107,14 +111,14 @@ onMounted(async () => {
           </div>
           <div class="auction-content">
             <h3 class="auction-title">{{ auction.title }}</h3>
-            <p class="auction-description">{{ auction.description.substring(0, 100) }}...</p>
+            <p class="auction-description">{{ auction.description }}...</p>
             <div class="auction-meta">
               <div class="auction-price">
-                <span class="current-price">${{ auction.currentPrice.toLocaleString() }}</span>
-                <span class="bid-count">{{ auction.totalBids }} bids</span>
+                <span class="current-price">${{ auction.current_price.toLocaleString() }}</span>
+                <span class="bid-count">{{ auction.bid_count }} bids</span>
               </div>
               <div class="auction-time">
-                <span class="time-left">Ends in {{ formatTimeLeft(auction.endDate) }}</span>
+                <span class="time-left">Ends in {{ formatTimeLeft(auction.end_date) }}</span>
               </div>
             </div>
             <router-link :to="`/auctions/${auction.id}`" class="btn btn-primary btn-full">
@@ -193,7 +197,9 @@ onMounted(async () => {
 
 <style scoped>
 .home {
-  min-height: 100vh;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
 }
 
 .hero {
@@ -202,8 +208,10 @@ onMounted(async () => {
   gap: 4rem;
   align-items: center;
   padding: 4rem 0;
-  max-width: 1200px;
-  margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
 }
 
 .hero-content {
@@ -213,7 +221,7 @@ onMounted(async () => {
 .hero-title {
   font-size: 3.5rem;
   font-weight: bold;
-  color: var(--color-heading);
+  color: #2c3e50;
   line-height: 1.2;
   margin-bottom: 1.5rem;
 }
@@ -228,7 +236,7 @@ onMounted(async () => {
 
 .hero-subtitle {
   font-size: 1.25rem;
-  color: var(--color-text);
+  color: #7f8c8d;
   line-height: 1.6;
   margin-bottom: 2rem;
 }
@@ -247,7 +255,11 @@ onMounted(async () => {
 }
 
 .hero-placeholder {
-  background: linear-gradient(135deg, var(--color-background-soft) 0%, var(--color-background) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-background-soft) 0%,
+    var(--color-background) 100%
+  );
   border: 2px dashed var(--color-border);
   border-radius: 1rem;
   padding: 4rem 2rem;
@@ -269,10 +281,11 @@ onMounted(async () => {
 }
 
 .stats {
-  background: var(--color-background-soft);
-  padding: 4rem 0;
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
 }
 
 .stats-grid {
@@ -291,12 +304,12 @@ onMounted(async () => {
 .stat-number {
   font-size: 2.5rem;
   font-weight: bold;
-  color: var(--color-heading);
+  color: #2c3e50;
   margin-bottom: 0.5rem;
 }
 
 .stat-label {
-  color: var(--color-text);
+  color: #7f8c8d;
   font-size: 1rem;
 }
 
@@ -304,9 +317,11 @@ onMounted(async () => {
 .how-it-works,
 .categories,
 .cta {
-  padding: 4rem 0;
-  max-width: 1200px;
-  margin: 0 auto;
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
 }
 
 .section-header {
@@ -318,13 +333,13 @@ onMounted(async () => {
 .section-header h2 {
   font-size: 2.5rem;
   font-weight: bold;
-  color: var(--color-heading);
+  color: #2c3e50;
   margin-bottom: 1rem;
 }
 
 .section-header p {
   font-size: 1.125rem;
-  color: var(--color-text);
+  color: #7f8c8d;
 }
 
 .view-all {
@@ -346,16 +361,18 @@ onMounted(async () => {
 }
 
 .auction-card {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .auction-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .auction-image {
@@ -403,12 +420,12 @@ onMounted(async () => {
 .auction-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--color-heading);
+  color: #2c3e50;
   margin-bottom: 0.5rem;
 }
 
 .auction-description {
-  color: var(--color-text);
+  color: #7f8c8d;
   margin-bottom: 1rem;
   line-height: 1.5;
 }
@@ -423,18 +440,18 @@ onMounted(async () => {
 .current-price {
   font-size: 1.25rem;
   font-weight: bold;
-  color: var(--color-heading);
+  color: #2c3e50;
 }
 
 .bid-count {
   font-size: 0.875rem;
-  color: var(--color-text);
+  color: #7f8c8d;
   margin-left: 0.5rem;
 }
 
 .time-left {
   font-size: 0.875rem;
-  color: var(--color-text);
+  color: #7f8c8d;
 }
 
 .steps-grid {
@@ -457,12 +474,12 @@ onMounted(async () => {
 .step h3 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--color-heading);
+  color: #2c3e50;
   margin-bottom: 0.5rem;
 }
 
 .step p {
-  color: var(--color-text);
+  color: #7f8c8d;
   line-height: 1.6;
 }
 
@@ -474,17 +491,19 @@ onMounted(async () => {
 }
 
 .category-card {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 2rem 1.5rem;
   text-align: center;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .category-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .category-icon {
@@ -495,29 +514,30 @@ onMounted(async () => {
 .category-card h3 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--color-heading);
+  color: #2c3e50;
   margin-bottom: 0.5rem;
 }
 
 .category-card p {
-  color: var(--color-text);
+  color: #7f8c8d;
   margin-bottom: 1rem;
 }
 
 .category-link {
-  color: var(--color-heading);
+  color: #3498db;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s;
 }
 
 .category-link:hover {
-  color: #1a202c;
+  color: #2980b9;
 }
 
 .cta {
-  background: var(--color-background-soft);
-  border-top: 1px solid var(--color-border);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .cta-content {
@@ -528,13 +548,13 @@ onMounted(async () => {
 .cta-content h2 {
   font-size: 2.5rem;
   font-weight: bold;
-  color: var(--color-heading);
+  color: #2c3e50;
   margin-bottom: 1rem;
 }
 
 .cta-content p {
   font-size: 1.125rem;
-  color: var(--color-text);
+  color: #7f8c8d;
   margin-bottom: 2rem;
 }
 
@@ -547,36 +567,36 @@ onMounted(async () => {
 
 .btn {
   padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-weight: 500;
+  border: none;
+  border-radius: 8px;
   font-size: 1rem;
-  text-decoration: none;
-  border: 1px solid transparent;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 0.5rem;
 }
 
 .btn-primary {
-  background: var(--color-heading);
+  background: #3498db;
   color: white;
 }
 
 .btn-primary:hover {
-  background: #1a202c;
+  background: #2980b9;
 }
 
 .btn-outline {
-  border-color: var(--color-border);
-  color: var(--color-text);
   background: transparent;
+  color: #3498db;
+  border: 2px solid #3498db;
 }
 
 .btn-outline:hover {
-  background: var(--color-background-soft);
+  background: #3498db;
+  color: white;
 }
 
 .btn-large {
@@ -594,31 +614,31 @@ onMounted(async () => {
     gap: 2rem;
     padding: 2rem 0;
   }
-  
+
   .hero-title {
     font-size: 2.5rem;
   }
-  
+
   .hero-actions {
     justify-content: center;
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .auctions-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .steps-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .categories-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .cta-actions {
     flex-direction: column;
     align-items: center;

@@ -1,8 +1,11 @@
 <template>
   <div class="buyer-dashboard">
+    <!-- Session Navigation -->
+    <SessionNavigation />
+
     <div class="dashboard-header">
       <h1>Buyer Dashboard</h1>
-      <p>Welcome back, {{ authStore.user?.firstName }}! Here's your bidding activity.</p>
+      <p>Welcome back, {{ authStore.user?.first_name }}! Here's your bidding activity.</p>
     </div>
 
     <!-- Stats Cards -->
@@ -31,7 +34,7 @@
       <div class="stat-card">
         <div class="stat-icon">💰</div>
         <div class="stat-content">
-          <div class="stat-number">${{ stats.totalSpent.toLocaleString() }}</div>
+          <div class="stat-number">${{ stats.totalSpent }}</div>
           <div class="stat-label">Total Spent</div>
         </div>
       </div>
@@ -68,14 +71,14 @@
         <h2>Your Active Bids</h2>
         <router-link to="/my-bids" class="view-all">View All</router-link>
       </div>
-      
+
       <div v-if="activeBids.length === 0" class="empty-state">
         <div class="empty-icon">🏷️</div>
         <h3>No Active Bids</h3>
         <p>Start bidding on auctions to see them here</p>
         <router-link to="/auctions" class="btn btn-primary">Browse Auctions</router-link>
       </div>
-      
+
       <div v-else class="bids-grid">
         <div v-for="bid in activeBids" :key="bid.id" class="bid-card">
           <div class="bid-image">
@@ -89,11 +92,11 @@
             <div class="bid-details">
               <div class="bid-amount">
                 <span class="label">Your Bid:</span>
-                <span class="amount">${{ bid.amount.toLocaleString() }}</span>
+                <span class="amount">${{ bid.amount }}</span>
               </div>
               <div class="current-price">
                 <span class="label">Current Price:</span>
-                <span class="amount">${{ getCurrentPrice(bid.auctionId).toLocaleString() }}</span>
+                <span class="amount">${{ getCurrentPrice(bid.auctionId) }}</span>
               </div>
               <div class="bid-time">
                 <span class="label">Bid Time:</span>
@@ -104,9 +107,7 @@
               <router-link :to="`/auctions/${bid.auctionId}`" class="btn btn-primary">
                 View Auction
               </router-link>
-              <button class="btn btn-outline" @click="placeNewBid(bid.auctionId)">
-                Bid Again
-              </button>
+              <button class="btn btn-outline" @click="placeNewBid(bid.auctionId)">Bid Again</button>
             </div>
           </div>
         </div>
@@ -119,7 +120,7 @@
         <h2>Recommended for You</h2>
         <router-link to="/auctions" class="view-all">View All</router-link>
       </div>
-      
+
       <div class="recommendations-grid">
         <div v-for="auction in recommendedAuctions" :key="auction.id" class="auction-card">
           <div class="auction-image">
@@ -134,12 +135,10 @@
                 {{ auction.title }}
               </router-link>
             </h3>
-            <p class="auction-description">
-              {{ auction.description.substring(0, 80) }}...
-            </p>
+            <p class="auction-description">{{ auction.description }}...</p>
             <div class="auction-meta">
               <div class="auction-price">
-                <span class="current-price">${{ auction.currentPrice.toLocaleString() }}</span>
+                <span class="current-price">${{ auction.currentPrice }}</span>
                 <span class="bid-count">{{ auction.totalBids }} bids</span>
               </div>
               <div class="auction-time">
@@ -162,7 +161,7 @@
       <div class="section-header">
         <h2>Recent Activity</h2>
       </div>
-      
+
       <div class="activity-list">
         <div v-for="activity in recentActivity" :key="activity.id" class="activity-item">
           <div class="activity-icon" :class="activity.type">
@@ -185,16 +184,19 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useAuctionStore, type Auction } from '@/stores/auction'
+import { useDashboardStore } from '@/stores/dashboard'
+import SessionNavigation from '@/components/SessionNavigation.vue'
 
 const authStore = useAuthStore()
 const auctionStore = useAuctionStore()
+const dashboardStore = useDashboardStore()
 
-// Mock data for demonstration
+// Real data from API
 const stats = ref({
-  activeBids: 5,
-  wonAuctions: 12,
-  watchlist: 8,
-  totalSpent: 2450
+  activeBids: 0,
+  wonAuctions: 0,
+  watchlist: 0,
+  totalSpent: 0,
 })
 
 const activeBids = ref([
@@ -204,7 +206,7 @@ const activeBids = ref([
     auctionTitle: 'Vintage Watch Collection',
     amount: 1500,
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    status: 'leading'
+    status: 'leading',
   },
   {
     id: '2',
@@ -212,8 +214,8 @@ const activeBids = ref([
     auctionTitle: 'Antique Furniture Set',
     amount: 800,
     timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    status: 'outbid'
-  }
+    status: 'outbid',
+  },
 ])
 
 const recommendedAuctions = ref<Auction[]>([])
@@ -223,30 +225,30 @@ const recentActivity = ref([
     type: 'bid',
     title: 'Placed bid on Vintage Watch Collection',
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    amount: 1500
+    amount: 1500,
   },
   {
     id: 2,
     type: 'won',
     title: 'Won auction: Antique Vase',
     timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    amount: 750
+    amount: 750,
   },
   {
     id: 3,
     type: 'watch',
     title: 'Added to watchlist: Modern Art Piece',
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
-  }
+    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+  },
 ])
 
 const getAuctionImage = (auctionId: string) => {
-  const auction = auctionStore.auctions.find(a => a.id === auctionId)
+  const auction = auctionStore.auctions.find((a) => a.id === auctionId)
   return auction?.images[0] || 'https://picsum.photos/300/200'
 }
 
 const getCurrentPrice = (auctionId: string) => {
-  const auction = auctionStore.auctions.find(a => a.id === auctionId)
+  const auction = auctionStore.auctions.find((a) => a.id === auctionId)
   return auction?.currentPrice || 0
 }
 
@@ -262,15 +264,15 @@ const formatDate = (dateString: string) => {
   const date = new Date(dateString)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
-  
+
   const minutes = Math.floor(diff / (1000 * 60))
   const hours = Math.floor(diff / (1000 * 60 * 60))
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  
+
   if (minutes < 60) return `${minutes}m ago`
   if (hours < 24) return `${hours}h ago`
   if (days < 7) return `${days}d ago`
-  
+
   return date.toLocaleDateString()
 }
 
@@ -278,12 +280,12 @@ const formatTimeLeft = (endDate: string) => {
   const end = new Date(endDate)
   const now = new Date()
   const diff = end.getTime() - now.getTime()
-  
+
   if (diff <= 0) return 'Ended'
-  
+
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-  
+
   if (days > 0) return `${days}d ${hours}h`
   if (hours > 0) return `${hours}h`
   return 'Less than 1h'
@@ -291,10 +293,14 @@ const formatTimeLeft = (endDate: string) => {
 
 const getActivityIcon = (type: string) => {
   switch (type) {
-    case 'bid': return '🏷️'
-    case 'won': return '🏆'
-    case 'watch': return '👁️'
-    default: return '📝'
+    case 'bid':
+      return '🏷️'
+    case 'won':
+      return '🏆'
+    case 'watch':
+      return '👁️'
+    default:
+      return '📝'
   }
 }
 
@@ -305,10 +311,39 @@ const placeNewBid = (auctionId: string) => {
 
 onMounted(async () => {
   try {
+    // Load dashboard statistics
+    const dashboardStats = await dashboardStore.fetchDashboardStats()
+
+    // Update stats with real data
+    stats.value = {
+      activeBids: dashboardStats.active_bids || 0,
+      wonAuctions: dashboardStats.won_auctions || 0,
+      watchlist: 8, // This would come from a watchlist API
+      totalSpent: dashboardStats.total_spent || 0,
+    }
+
+    // Load buyer analytics
+    const buyerAnalytics = await dashboardStore.fetchBuyerAnalytics()
+
+    // Update active bids with real data
+    activeBids.value = buyerAnalytics.recent_bids.map((bid: any) => ({
+      id: bid.id,
+      auctionId: bid.auction_id,
+      auctionTitle: bid.auction_title,
+      amount: bid.amount,
+      timestamp: bid.created_at,
+      status: bid.is_winning ? 'leading' : 'outbid',
+    }))
+
+    // Load recent activity
+    await dashboardStore.fetchRecentActivity()
+    recentActivity.value = dashboardStore.recentActivity
+
+    // Load recommended auctions
     await auctionStore.fetchAuctions()
     recommendedAuctions.value = auctionStore.activeAuctions.slice(0, 4)
   } catch (error) {
-    console.error('Failed to load auctions:', error)
+    console.error('Failed to load buyer dashboard:', error)
   }
 })
 </script>
@@ -352,7 +387,9 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 1rem;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .stat-card:hover {
@@ -404,7 +441,9 @@ onMounted(async () => {
   gap: 1rem;
   text-decoration: none;
   color: inherit;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .action-card:hover {
@@ -497,7 +536,9 @@ onMounted(async () => {
   border: 1px solid var(--color-border);
   border-radius: 1rem;
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .bid-card:hover {
@@ -595,7 +636,9 @@ onMounted(async () => {
   border: 1px solid var(--color-border);
   border-radius: 1rem;
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .auction-card:hover {
@@ -770,19 +813,19 @@ onMounted(async () => {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .quick-actions {
     grid-template-columns: 1fr;
   }
-  
+
   .bids-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .recommendations-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .bid-actions,
   .auction-actions {
     flex-direction: column;

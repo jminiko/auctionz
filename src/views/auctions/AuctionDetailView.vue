@@ -40,7 +40,9 @@
         <div class="auction-meta">
           <div class="meta-item">
             <span class="label">Seller:</span>
-            <span class="value">{{ auction.sellerName }}</span>
+            <span class="value"
+              >{{ auction.seller.first_name }} {{ auction.seller.last_name }}</span
+            >
           </div>
           <div class="meta-item">
             <span class="label">Category:</span>
@@ -65,12 +67,12 @@
         <div class="bidding-section">
           <div class="current-price">
             <span class="label">Current Price:</span>
-            <span class="price">${{ auction.currentPrice.toLocaleString() }}</span>
+            <span class="price">${{ auction.current_price }}</span>
           </div>
-          
+
           <div class="bid-info">
-            <div class="bid-count">{{ auction.totalBids }} bids</div>
-            <div class="time-left">Ends in {{ formatTimeLeft(auction.endDate) }}</div>
+            <div class="bid-count">{{ auction.bid_count }} bids</div>
+            <div class="time-left">Ends in {{ formatTimeLeft(auction.end_date) }}</div>
           </div>
 
           <!-- Bidding Form -->
@@ -109,28 +111,30 @@
             <p v-if="!authStore.isAuthenticated">
               Please <router-link to="/login">sign in</router-link> to place a bid.
             </p>
-            <p v-else-if="auction.status !== 'active'">
+            <p v-else-if="auction.status !== 'active' && auction.status !== 'pending'">
               This auction is no longer active.
             </p>
-            <p v-else>
-              You cannot bid on your own auction.
-            </p>
+            <p v-else>You cannot bid on your own auction.</p>
           </div>
         </div>
 
         <!-- Bid History -->
         <div class="bid-history">
           <h3>Bid History</h3>
-          <div v-if="auction.bids.length === 0" class="no-bids">
+          <div v-if="!auction.bid_count || auction.bid_count === 0" class="no-bids">
             No bids yet. Be the first to bid!
           </div>
           <div v-else class="bids-list">
-            <div v-for="bid in auction.bids.slice().reverse()" :key="bid.id" class="bid-item">
+            <div
+              v-for="bid in auctionStore.myBids.slice().reverse()"
+              :key="bid.id"
+              class="bid-item"
+            >
               <div class="bid-info">
-                <div class="bidder">{{ bid.bidderName }}</div>
+                <div class="bidder">{{ bid.bidder?.first_name }} {{ bid.bidder?.last_name }}</div>
                 <div class="bid-amount">${{ bid.amount.toLocaleString() }}</div>
               </div>
-              <div class="bid-time">{{ formatDate(bid.timestamp) }}</div>
+              <div class="bid-time">{{ formatDate(bid.created_at) }}</div>
             </div>
           </div>
         </div>
@@ -157,19 +161,19 @@ const auction = computed(() => auctionStore.currentAuction)
 
 const canBid = computed(() => {
   if (!authStore.isAuthenticated) return false
-  if (auction.value?.status !== 'active') return false
-  if (auction.value?.sellerId === authStore.user?.id) return false
+  if (auction.value?.status !== 'active' && auction.value?.status !== 'pending') return false
+  if (auction.value?.seller.id === authStore.user?.id) return false
   return true
 })
 
 const minBidAmount = computed(() => {
   if (!auction.value) return 0
-  return auction.value.currentPrice + 1
+  return auction.value.current_price + 1
 })
 
 const bidIncrement = computed(() => {
   if (!auction.value) return 1
-  const price = auction.value.currentPrice
+  const price = auction.value.current_price
   if (price < 100) return 1
   if (price < 1000) return 5
   if (price < 10000) return 10
@@ -178,13 +182,9 @@ const bidIncrement = computed(() => {
 
 const bidSuggestions = computed(() => {
   if (!auction.value) return []
-  const current = auction.value.currentPrice
+  const current = auction.value.current_price
   const increment = bidIncrement.value
-  return [
-    current + increment,
-    current + increment * 2,
-    current + increment * 5
-  ]
+  return [current + increment, current + increment * 2, current + increment * 5]
 })
 
 const canPlaceBid = computed(() => {
@@ -196,13 +196,13 @@ const formatTimeLeft = (endDate: string) => {
   const end = new Date(endDate)
   const now = new Date()
   const diff = end.getTime() - now.getTime()
-  
+
   if (diff <= 0) return 'Ended'
-  
+
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-  
+
   if (days > 0) return `${days}d ${hours}h`
   if (hours > 0) return `${hours}h ${minutes}m`
   if (minutes > 0) return `${minutes}m`
@@ -216,8 +216,9 @@ const formatDate = (dateString: string) => {
 
 const placeBid = async () => {
   if (!canPlaceBid.value) return
-  
+
   try {
+    console.log(auction.value!.id, Number(bidAmount.value))
     await auctionStore.placeBid(auction.value!.id, Number(bidAmount.value))
     bidAmount.value = ''
     // Refresh auction data
@@ -608,23 +609,23 @@ onMounted(async () => {
     grid-template-columns: 1fr;
     gap: 2rem;
   }
-  
+
   .auction-meta {
     grid-template-columns: 1fr;
   }
-  
+
   .current-price {
     flex-direction: column;
     gap: 0.5rem;
     text-align: center;
   }
-  
+
   .bid-info {
     flex-direction: column;
     gap: 0.5rem;
     text-align: center;
   }
-  
+
   .bid-item {
     flex-direction: column;
     gap: 0.5rem;

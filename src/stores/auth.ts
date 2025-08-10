@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authAPI } from '@/services/api'
+import { sessionManager, type AuthTokens } from '@/services/session'
 
 export interface User {
   id: string
@@ -41,7 +42,7 @@ export interface RegisterData {
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
-  const token = ref<string | null>(localStorage.getItem('token'))
+  const token = ref<string | null>(sessionManager.getAccessToken())
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -55,15 +56,21 @@ export const useAuthStore = defineStore('auth', () => {
   const login = async (credentials: LoginCredentials) => {
     loading.value = true
     error.value = null
-    
+
     try {
       const response = await authAPI.login(credentials)
-      const { user: userData, token: authToken } = response.data
-      
+      const { user: userData, access_token, refresh_token, session_id } = response.data
+
       user.value = userData
-      token.value = authToken
-      localStorage.setItem('token', authToken)
-      
+      token.value = access_token
+
+      // Store tokens using session manager
+      sessionManager.setAuthTokens({
+        access_token,
+        refresh_token,
+        session_id,
+      })
+
       return userData
     } catch (err: any) {
       error.value = err.response?.data?.error || 'Login failed. Please check your credentials.'
@@ -76,15 +83,21 @@ export const useAuthStore = defineStore('auth', () => {
   const register = async (userData: RegisterData) => {
     loading.value = true
     error.value = null
-    
+
     try {
       const response = await authAPI.register(userData)
-      const { user: newUser, token: authToken } = response.data
-      
+      const { user: newUser, access_token, refresh_token, session_id } = response.data
+
       user.value = newUser
-      token.value = authToken
-      localStorage.setItem('token', authToken)
-      
+      token.value = access_token
+
+      // Store tokens using session manager
+      sessionManager.setAuthTokens({
+        access_token,
+        refresh_token,
+        session_id,
+      })
+
       return newUser
     } catch (err: any) {
       error.value = err.response?.data?.error || 'Registration failed. Please try again.'
@@ -94,31 +107,47 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const logout = () => {
-    user.value = null
-    token.value = null
-    localStorage.removeItem('token')
+  const logout = async (sessionId?: string) => {
+    try {
+      await sessionManager.logout(sessionId)
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      user.value = null
+      token.value = null
+    }
+  }
+
+  const logoutAll = async () => {
+    try {
+      await sessionManager.logoutAll()
+    } catch (error) {
+      console.error('Logout all error:', error)
+    } finally {
+      user.value = null
+      token.value = null
+    }
   }
 
   const fetchUser = async () => {
-    if (!token.value) return null
-    
+    if (!sessionManager.isAuthenticated()) return null
+
     try {
       const response = await authAPI.getProfile()
       user.value = response.data.user
       return response.data.user
     } catch (err) {
-      logout()
+      await logout()
       throw err
     }
   }
 
   const updateProfile = async (profileData: Partial<User>) => {
     if (!user.value) throw new Error('User not authenticated')
-    
+
     loading.value = true
     error.value = null
-    
+
     try {
       const response = await authAPI.updateProfile(profileData)
       user.value = response.data.user
@@ -144,7 +173,8 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     logout,
+    logoutAll,
     fetchUser,
-    updateProfile
+    updateProfile,
   }
 })

@@ -47,9 +47,7 @@
           class="search-input"
           @input="handleSearch"
         />
-        <button @click="handleSearch" class="search-btn">
-          🔍
-        </button>
+        <button @click="handleSearch" class="search-btn">🔍</button>
       </div>
 
       <div class="filters">
@@ -117,7 +115,9 @@
           <div class="table-cell">
             <div class="price-info">
               <div class="current-price">${{ auction.currentPrice.toLocaleString() }}</div>
-              <div class="starting-price">Started: ${{ auction.startingPrice.toLocaleString() }}</div>
+              <div class="starting-price">
+                Started: ${{ auction.starting_price.toLocaleString() }}
+              </div>
             </div>
           </div>
           <div class="table-cell">{{ auction.totalBids }}</div>
@@ -129,10 +129,18 @@
             <router-link :to="`/auctions/${auction.id}`" class="btn btn-outline btn-small">
               View
             </router-link>
-            <button v-if="auction.status === 'pending'" @click="approveAuction(auction.id)" class="btn btn-success btn-small">
+            <button
+              v-if="auction.status === 'pending'"
+              @click="approveAuction(auction.id)"
+              class="btn btn-success btn-small"
+            >
               Approve
             </button>
-            <button v-if="auction.status === 'active'" @click="suspendAuction(auction.id)" class="btn btn-warning btn-small">
+            <button
+              v-if="auction.status === 'active'"
+              @click="suspendAuction(auction.id)"
+              class="btn btn-warning btn-small"
+            >
               Suspend
             </button>
             <button @click="deleteAuction(auction.id)" class="btn btn-danger btn-small">
@@ -145,14 +153,10 @@
 
     <!-- Pagination -->
     <div v-if="totalPages > 1" class="pagination">
-      <button
-        @click="currentPage--"
-        :disabled="currentPage === 1"
-        class="pagination-btn"
-      >
+      <button @click="currentPage--" :disabled="currentPage === 1" class="pagination-btn">
         Previous
       </button>
-      
+
       <div class="page-numbers">
         <button
           v-for="page in visiblePages"
@@ -163,12 +167,8 @@
           {{ page }}
         </button>
       </div>
-      
-      <button
-        @click="currentPage++"
-        :disabled="currentPage === totalPages"
-        class="pagination-btn"
-      >
+
+      <button @click="currentPage++" :disabled="currentPage === totalPages" class="pagination-btn">
         Next
       </button>
     </div>
@@ -196,7 +196,7 @@ const stats = ref({
   totalAuctions: 2847,
   activeAuctions: 2150,
   pendingAuctions: 23,
-  totalValue: 2850000
+  totalValue: 2850000,
 })
 
 const auctions = ref([
@@ -206,11 +206,11 @@ const auctions = ref([
     category: 'Collectibles',
     sellerName: 'John Smith',
     currentPrice: 2500,
-    startingPrice: 1000,
+    starting_price: 1000,
     totalBids: 15,
     status: 'active',
     endDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-    images: ['https://picsum.photos/100/100?random=1']
+    images: ['https://picsum.photos/100/100?random=1'],
   },
   {
     id: 2,
@@ -218,11 +218,11 @@ const auctions = ref([
     category: 'Art',
     sellerName: 'Sarah Johnson',
     currentPrice: 1800,
-    startingPrice: 800,
+    starting_price: 800,
     totalBids: 8,
     status: 'pending',
     endDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-    images: ['https://picsum.photos/100/100?random=2']
+    images: ['https://picsum.photos/100/100?random=2'],
   },
   {
     id: 3,
@@ -230,12 +230,12 @@ const auctions = ref([
     category: 'Art',
     sellerName: 'Mike Davis',
     currentPrice: 5000,
-    startingPrice: 3000,
+    starting_price: 3000,
     totalBids: 12,
     status: 'active',
     endDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
-    images: ['https://picsum.photos/100/100?random=3']
-  }
+    images: ['https://picsum.photos/100/100?random=3'],
+  },
 ])
 
 const filteredAuctions = computed(() => {
@@ -244,21 +244,22 @@ const filteredAuctions = computed(() => {
   // Apply search filter
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(auction =>
-      auction.title.toLowerCase().includes(query) ||
-      auction.sellerName.toLowerCase().includes(query) ||
-      auction.category.toLowerCase().includes(query)
+    filtered = filtered.filter(
+      (auction) =>
+        auction.title.toLowerCase().includes(query) ||
+        auction.sellerName.toLowerCase().includes(query) ||
+        auction.category.toLowerCase().includes(query),
     )
   }
 
   // Apply status filter
   if (selectedStatus.value) {
-    filtered = filtered.filter(auction => auction.status === selectedStatus.value)
+    filtered = filtered.filter((auction) => auction.status === selectedStatus.value)
   }
 
   // Apply category filter
   if (selectedCategory.value) {
-    filtered = filtered.filter(auction => auction.category === selectedCategory.value)
+    filtered = filtered.filter((auction) => auction.category === selectedCategory.value)
   }
 
   // Apply sorting
@@ -295,15 +296,15 @@ const visiblePages = computed(() => {
   const maxVisible = 5
   let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2))
   let end = Math.min(totalPages.value, start + maxVisible - 1)
-  
+
   if (end - start + 1 < maxVisible) {
     start = Math.max(1, end - maxVisible + 1)
   }
-  
+
   for (let i = start; i <= end; i++) {
     pages.push(i)
   }
-  
+
   return pages
 })
 
@@ -732,45 +733,45 @@ onMounted(async () => {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .filters {
     grid-template-columns: 1fr;
   }
-  
+
   .table-header,
   .table-row {
     grid-template-columns: 1fr;
     gap: 0.5rem;
   }
-  
+
   .table-header {
     display: none;
   }
-  
+
   .table-row {
     padding: 1rem;
     border-bottom: 1px solid var(--color-border);
   }
-  
+
   .table-cell {
     justify-content: space-between;
   }
-  
+
   .table-cell::before {
     content: attr(data-label);
     font-weight: 600;
     color: var(--color-heading);
   }
-  
+
   .actions {
     justify-content: center;
   }
-  
+
   .pagination {
     flex-direction: column;
     gap: 1rem;
   }
-  
+
   .page-numbers {
     order: -1;
   }

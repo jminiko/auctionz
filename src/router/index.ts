@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { sessionLifecycleManager } from '../services/sessionLifecycle'
 
 // Public views
 import HomeView from '../views/HomeView.vue'
@@ -35,32 +36,32 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: HomeView,
-      meta: { title: 'Home' }
+      meta: { title: 'Home' },
     },
     {
       path: '/login',
       name: 'login',
       component: LoginView,
-      meta: { title: 'Login' }
+      meta: { title: 'Login' },
     },
     {
       path: '/register',
       name: 'register',
       component: RegisterView,
-      meta: { title: 'Register' }
+      meta: { title: 'Register' },
     },
     {
       path: '/auctions',
       name: 'auctions',
       component: AuctionListView,
-      meta: { title: 'Auctions' }
+      meta: { title: 'Auctions' },
     },
     {
       path: '/auctions/:id',
       name: 'auction-detail',
       component: AuctionDetailView,
       props: true,
-      meta: { title: 'Auction Details' }
+      meta: { title: 'Auction Details' },
     },
 
     // Protected routes
@@ -68,31 +69,49 @@ const router = createRouter({
       path: '/dashboard',
       name: 'dashboard',
       component: DashboardView,
-      meta: { requiresAuth: true, title: 'Dashboard' }
+      meta: { requiresAuth: true, title: 'Dashboard' },
     },
     {
       path: '/buyer-dashboard',
       name: 'buyer-dashboard',
       component: BuyerDashboardView,
-      meta: { requiresAuth: true, role: 'buyer', title: 'Buyer Dashboard' }
+      meta: { requiresAuth: true, role: 'buyer', title: 'Buyer Dashboard' },
     },
     {
       path: '/seller-dashboard',
       name: 'seller-dashboard',
       component: SellerDashboardView,
-      meta: { requiresAuth: true, role: 'seller', title: 'Seller Dashboard' }
+      meta: { requiresAuth: true, role: 'seller', title: 'Seller Dashboard' },
     },
     {
       path: '/admin-dashboard',
       name: 'admin-dashboard',
       component: AdminDashboardView,
-      meta: { requiresAuth: true, role: 'admin', title: 'Admin Dashboard' }
+      meta: { requiresAuth: true, role: 'admin', title: 'Admin Dashboard' },
     },
     {
       path: '/profile',
       name: 'profile',
       component: ProfileView,
-      meta: { requiresAuth: true, title: 'Profile' }
+      meta: { requiresAuth: true, title: 'Profile' },
+    },
+    {
+      path: '/sessions',
+      name: 'sessions',
+      component: () => import('@/components/SessionManager.vue'),
+      meta: { requiresAuth: true, title: 'Active Sessions' },
+    },
+    {
+      path: '/logout',
+      name: 'logout',
+      component: () => import('@/views/LogoutView.vue'),
+      meta: { requiresAuth: true, title: 'Logout Options' },
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('@/views/profile/ProfileView.vue'),
+      meta: { requiresAuth: true, title: 'My Profile' },
     },
 
     // Auction management routes
@@ -100,19 +119,19 @@ const router = createRouter({
       path: '/create-auction',
       name: 'create-auction',
       component: CreateAuctionView,
-      meta: { requiresAuth: true, role: 'seller', title: 'Create Auction' }
+      meta: { requiresAuth: true, role: 'seller', title: 'Create Auction' },
     },
     {
       path: '/my-auctions',
       name: 'my-auctions',
       component: MyAuctionsView,
-      meta: { requiresAuth: true, role: 'seller', title: 'My Auctions' }
+      meta: { requiresAuth: true, role: 'seller', title: 'My Auctions' },
     },
     {
       path: '/my-bids',
       name: 'my-bids',
       component: MyBidsView,
-      meta: { requiresAuth: true, role: 'buyer', title: 'My Bids' }
+      meta: { requiresAuth: true, role: 'buyer', title: 'My Bids' },
     },
 
     // Admin routes
@@ -120,13 +139,13 @@ const router = createRouter({
       path: '/admin/auctions',
       name: 'admin-auctions',
       component: AdminAuctionsView,
-      meta: { requiresAuth: true, role: 'admin', title: 'Manage Auctions' }
+      meta: { requiresAuth: true, role: 'admin', title: 'Manage Auctions' },
     },
     {
       path: '/admin/users',
       name: 'admin-users',
       component: AdminUsersView,
-      meta: { requiresAuth: true, role: 'admin', title: 'Manage Users' }
+      meta: { requiresAuth: true, role: 'admin', title: 'Manage Users' },
     },
 
     // 404 page
@@ -134,24 +153,49 @@ const router = createRouter({
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: NotFoundView,
-      meta: { title: 'Page Not Found' }
-    }
-  ]
+      meta: { title: 'Page Not Found' },
+    },
+  ],
 })
 
-// Navigation guard
-router.beforeEach((to, from, next) => {
+// Navigation guard with session lifecycle management
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
-  
+
   // Set page title
   document.title = to.meta.title ? `${to.meta.title} - AuctionZ` : 'AuctionZ'
-  
+
+  // Initialize session lifecycle manager if not already done
+  if (!sessionLifecycleManager.getSessionState().isInitialized) {
+    try {
+      await sessionLifecycleManager.initialize(router, authStore)
+    } catch (error) {
+      console.error('Failed to initialize session lifecycle manager:', error)
+    }
+  }
+
+    // Validate session for all routes (including unguarded ones)
+  if (authStore.isAuthenticated && sessionLifecycleManager.getSessionState().isInitialized) {
+    try {
+      const validationResult = await sessionLifecycleManager.validateSession()
+      
+      if (!validationResult.isValid) {
+        console.log('Session validation failed:', validationResult.reason)
+        // The session lifecycle manager will handle logout and redirection
+        return // Don't call next() - let the lifecycle manager handle it
+      }
+    } catch (error) {
+      console.error('Session validation error:', error)
+      // Continue with navigation even if validation fails
+    }
+  }
+
   // Check if route requires authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next({ name: 'login', query: { redirect: to.fullPath } })
     return
   }
-  
+
   // Check role-based access
   if (to.meta.role && authStore.userRole !== to.meta.role) {
     if (authStore.isAuthenticated) {
@@ -170,7 +214,7 @@ router.beforeEach((to, from, next) => {
     }
     return
   }
-  
+
   // Redirect authenticated users away from auth pages
   if (authStore.isAuthenticated && (to.name === 'login' || to.name === 'register')) {
     if (authStore.isAdmin) {
@@ -184,7 +228,7 @@ router.beforeEach((to, from, next) => {
     }
     return
   }
-  
+
   next()
 })
 

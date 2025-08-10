@@ -2,16 +2,22 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
+import SessionAwareWrapper from './components/SessionAwareWrapper.vue'
+import SessionLifecycleStatus from './components/SessionLifecycleStatus.vue'
+import ErrorBoundary from './components/ErrorBoundary.vue'
+import { useSessionLifecycle } from './services/sessionLifecycle'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const sessionLifecycle = useSessionLifecycle()
 
 const showUserMenu = ref(false)
 const showMobileMenu = ref(false)
+const showAuthOptions = ref(true) // Control whether to show login/signup options
 
 const userInitials = computed(() => {
   if (!authStore.user) return ''
-  return `${authStore.user.firstName[0]}${authStore.user.lastName[0]}`.toUpperCase()
+  return `${authStore.user.first_name[0]}${authStore.user.last_name[0]}`.toUpperCase()
 })
 
 const toggleUserMenu = () => {
@@ -44,17 +50,28 @@ const handleClickOutside = (event: Event) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
+
+  // Initialize session lifecycle manager
+  if (authStore.isAuthenticated) {
+    try {
+      await sessionLifecycle.initialize(router, authStore)
+    } catch (error) {
+      console.error('Failed to initialize session lifecycle:', error)
+    }
+  }
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  sessionLifecycle.destroy()
 })
 </script>
 
 <template>
-  <div id="app">
+  <ErrorBoundary>
+    <div id="app">
     <!-- Navigation Header -->
     <header class="header">
       <nav class="nav">
@@ -66,37 +83,80 @@ onUnmounted(() => {
         </div>
 
         <div class="nav-menu">
+          <!-- Always visible navigation links -->
           <router-link to="/" class="nav-link">Home</router-link>
           <router-link to="/auctions" class="nav-link">Auctions</router-link>
-          
-          <!-- User Menu -->
+
+          <!-- Session Lifecycle Status -->
+          <SessionLifecycleStatus />
+
+          <!-- Logged-in User Menu -->
           <div v-if="authStore.isAuthenticated" class="user-menu">
             <button @click="toggleUserMenu" class="user-menu-button">
               <div class="user-avatar">
                 {{ userInitials }}
               </div>
-              <span class="user-name">{{ authStore.user?.firstName }}</span>
+              <span class="user-name">{{ authStore.user?.first_name }}</span>
               <span class="dropdown-arrow">▼</span>
             </button>
-            
+
             <div v-if="showUserMenu" class="user-dropdown">
-              <router-link to="/dashboard" class="dropdown-item">
-                Dashboard
+              <!-- Role-based dashboard links -->
+              <router-link v-if="authStore.isAdmin" to="/admin-dashboard" class="dropdown-item">
+                Admin Dashboard
               </router-link>
-              <router-link to="/profile" class="dropdown-item">
-                Profile
+              <router-link
+                v-else-if="authStore.isSeller"
+                to="/seller-dashboard"
+                class="dropdown-item"
+              >
+                Seller Dashboard
               </router-link>
+              <router-link
+                v-else-if="authStore.isBuyer"
+                to="/buyer-dashboard"
+                class="dropdown-item"
+              >
+                Buyer Dashboard
+              </router-link>
+              <router-link v-else to="/dashboard" class="dropdown-item"> Dashboard </router-link>
+
+              <!-- User-specific links -->
+              <router-link v-if="authStore.isSeller" to="/my-auctions" class="dropdown-item">
+                My Auctions
+              </router-link>
+              <router-link v-if="authStore.isBuyer" to="/my-bids" class="dropdown-item">
+                My Bids
+              </router-link>
+              <router-link v-if="authStore.isSeller" to="/create-auction" class="dropdown-item">
+                Create Auction
+              </router-link>
+
               <div class="dropdown-divider"></div>
-              <button @click="logout" class="dropdown-item logout">
-                Logout
-              </button>
+
+              <!-- Profile and settings -->
+              <router-link to="/profile" class="dropdown-item">Profile</router-link>
+              <router-link to="/sessions" class="dropdown-item">Sessions</router-link>
+              <router-link to="/logout" class="dropdown-item">Logout Options</router-link>
+
+              <div class="dropdown-divider"></div>
+
+              <!-- Quick logout -->
+              <button @click="logout" class="dropdown-item logout">Logout</button>
             </div>
           </div>
 
-          <!-- Auth Links -->
-          <div v-else class="auth-links">
+          <!-- Non-authenticated User Menu (with auth options) -->
+          <div v-else-if="showAuthOptions" class="auth-links">
             <router-link to="/login" class="btn btn-outline">Login</router-link>
             <router-link to="/register" class="btn btn-primary">Sign Up</router-link>
+          </div>
+
+          <!-- Non-authenticated User Menu (without auth options) -->
+          <div v-else class="guest-links">
+            <router-link to="/about" class="nav-link">About</router-link>
+            <router-link to="/contact" class="nav-link">Contact</router-link>
+            <router-link to="/help" class="nav-link">Help</router-link>
           </div>
         </div>
 
@@ -110,33 +170,118 @@ onUnmounted(() => {
 
       <!-- Mobile Menu -->
       <div v-if="showMobileMenu" class="mobile-menu">
+        <!-- Always visible navigation links -->
         <router-link to="/" class="mobile-link" @click="closeMobileMenu">Home</router-link>
-        <router-link to="/auctions" class="mobile-link" @click="closeMobileMenu">Auctions</router-link>
-        
+        <router-link to="/auctions" class="mobile-link" @click="closeMobileMenu"
+          >Auctions</router-link
+        >
+
+        <!-- Logged-in User Section -->
         <div v-if="authStore.isAuthenticated" class="mobile-user-section">
           <div class="mobile-user-info">
             <div class="mobile-user-avatar">{{ userInitials }}</div>
             <div class="mobile-user-details">
-              <div class="mobile-user-name">{{ authStore.user?.firstName }} {{ authStore.user?.lastName }}</div>
+              <div class="mobile-user-name">
+                {{ authStore.user?.first_name }} {{ authStore.user?.last_name }}
+              </div>
               <div class="mobile-user-role">{{ authStore.userRole }}</div>
             </div>
           </div>
-          <router-link to="/dashboard" class="mobile-link" @click="closeMobileMenu">Dashboard</router-link>
-          <router-link to="/profile" class="mobile-link" @click="closeMobileMenu">Profile</router-link>
+
+          <!-- Role-based dashboard links -->
+          <router-link
+            v-if="authStore.isAdmin"
+            to="/admin-dashboard"
+            class="mobile-link"
+            @click="closeMobileMenu"
+          >
+            Admin Dashboard
+          </router-link>
+          <router-link
+            v-else-if="authStore.isSeller"
+            to="/seller-dashboard"
+            class="mobile-link"
+            @click="closeMobileMenu"
+          >
+            Seller Dashboard
+          </router-link>
+          <router-link
+            v-else-if="authStore.isBuyer"
+            to="/buyer-dashboard"
+            class="mobile-link"
+            @click="closeMobileMenu"
+          >
+            Buyer Dashboard
+          </router-link>
+          <router-link v-else to="/dashboard" class="mobile-link" @click="closeMobileMenu">
+            Dashboard
+          </router-link>
+
+          <!-- User-specific links -->
+          <router-link
+            v-if="authStore.isSeller"
+            to="/my-auctions"
+            class="mobile-link"
+            @click="closeMobileMenu"
+          >
+            My Auctions
+          </router-link>
+          <router-link
+            v-if="authStore.isBuyer"
+            to="/my-bids"
+            class="mobile-link"
+            @click="closeMobileMenu"
+          >
+            My Bids
+          </router-link>
+          <router-link
+            v-if="authStore.isSeller"
+            to="/create-auction"
+            class="mobile-link"
+            @click="closeMobileMenu"
+          >
+            Create Auction
+          </router-link>
+
+          <!-- Profile and settings -->
+          <router-link to="/profile" class="mobile-link" @click="closeMobileMenu"
+            >Profile</router-link
+          >
+          <router-link to="/sessions" class="mobile-link" @click="closeMobileMenu"
+            >Sessions</router-link
+          >
+          <router-link to="/logout" class="mobile-link" @click="closeMobileMenu"
+            >Logout Options</router-link
+          >
+
           <button @click="logout" class="mobile-link logout">Logout</button>
         </div>
-        
-        <div v-else class="mobile-auth">
+
+        <!-- Non-authenticated User Section (with auth options) -->
+        <div v-else-if="showAuthOptions" class="mobile-auth">
           <router-link to="/login" class="mobile-link" @click="closeMobileMenu">Login</router-link>
-          <router-link to="/register" class="mobile-link" @click="closeMobileMenu">Sign Up</router-link>
+          <router-link to="/register" class="mobile-link" @click="closeMobileMenu"
+            >Sign Up</router-link
+          >
+        </div>
+
+        <!-- Non-authenticated User Section (without auth options) -->
+        <div v-else class="mobile-guest">
+          <router-link to="/about" class="mobile-link" @click="closeMobileMenu">About</router-link>
+          <router-link to="/contact" class="mobile-link" @click="closeMobileMenu"
+            >Contact</router-link
+          >
+          <router-link to="/help" class="mobile-link" @click="closeMobileMenu">Help</router-link>
         </div>
       </div>
     </header>
 
     <!-- Main Content -->
-    <main class="main">
-      <router-view />
-    </main>
+    <SessionAwareWrapper>
+      <main class="main">
+        <router-view />
+      </main>
+    </SessionAwareWrapper>
 
     <!-- Footer -->
     <footer class="footer">
@@ -162,7 +307,8 @@ onUnmounted(() => {
         <p>&copy; 2024 AuctionZ. All rights reserved.</p>
       </div>
     </footer>
-  </div>
+    </div>
+  </ErrorBoundary>
 </template>
 
 <style scoped>
@@ -311,6 +457,12 @@ onUnmounted(() => {
   gap: 1rem;
 }
 
+.guest-links {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
 .btn {
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
@@ -384,6 +536,18 @@ onUnmounted(() => {
 }
 
 .mobile-user-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.mobile-auth {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.mobile-guest {
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--color-border);
@@ -475,19 +639,19 @@ onUnmounted(() => {
   .nav-menu {
     display: none;
   }
-  
+
   .mobile-menu-toggle {
     display: flex;
   }
-  
+
   .mobile-menu {
     display: block;
   }
-  
+
   .main {
     padding: 1rem;
   }
-  
+
   .footer-content {
     grid-template-columns: 1fr;
     text-align: center;

@@ -1,5 +1,8 @@
 <template>
   <div class="admin-dashboard">
+    <!-- Session Navigation -->
+    <SessionNavigation />
+
     <div class="dashboard-header">
       <h1>Admin Dashboard</h1>
       <p>Platform overview and management tools</p>
@@ -79,14 +82,14 @@
         <h2>Recent Users</h2>
         <router-link to="/admin/users" class="view-all">View All Users</router-link>
       </div>
-      
+
       <div class="users-list">
         <div v-for="user in recentUsers" :key="user.id" class="user-item">
           <div class="user-avatar">
             {{ getUserInitials(user) }}
           </div>
           <div class="user-content">
-            <div class="user-name">{{ user.firstName }} {{ user.lastName }}</div>
+            <div class="user-name">{{ user.first_name }} {{ user.last_name }}</div>
             <div class="user-email">{{ user.email }}</div>
             <div class="user-role">{{ user.role }}</div>
           </div>
@@ -94,15 +97,15 @@
             {{ user.status }}
           </div>
           <div class="user-actions">
-            <button class="btn btn-outline" @click="viewUser(user.id)">
-              View
-            </button>
-            <button v-if="user.status === 'active'" class="btn btn-danger" @click="suspendUser(user.id)">
+            <button class="btn btn-outline" @click="viewUser(user.id)">View</button>
+            <button
+              v-if="user.status === 'active'"
+              class="btn btn-danger"
+              @click="suspendUser(user.id)"
+            >
               Suspend
             </button>
-            <button v-else class="btn btn-primary" @click="activateUser(user.id)">
-              Activate
-            </button>
+            <button v-else class="btn btn-primary" @click="activateUser(user.id)">Activate</button>
           </div>
         </div>
       </div>
@@ -114,7 +117,7 @@
         <h2>Recent Auctions</h2>
         <router-link to="/admin/auctions" class="view-all">View All Auctions</router-link>
       </div>
-      
+
       <div class="auctions-list">
         <div v-for="auction in recentAuctions" :key="auction.id" class="auction-item">
           <div class="auction-image">
@@ -132,10 +135,18 @@
             <router-link :to="`/auctions/${auction.id}`" class="btn btn-outline">
               View
             </router-link>
-            <button v-if="auction.status === 'pending'" class="btn btn-primary" @click="approveAuction(auction.id)">
+            <button
+              v-if="auction.status === 'pending'"
+              class="btn btn-primary"
+              @click="approveAuction(auction.id)"
+            >
               Approve
             </button>
-            <button v-if="auction.status === 'active'" class="btn btn-danger" @click="suspendAuction(auction.id)">
+            <button
+              v-if="auction.status === 'active'"
+              class="btn btn-danger"
+              @click="suspendAuction(auction.id)"
+            >
               Suspend
             </button>
           </div>
@@ -148,7 +159,7 @@
       <div class="section-header">
         <h2>System Health</h2>
       </div>
-      
+
       <div class="health-grid">
         <div class="health-card">
           <div class="health-icon">🟢</div>
@@ -190,7 +201,7 @@
       <div class="section-header">
         <h2>Recent Activity</h2>
       </div>
-      
+
       <div class="activity-list">
         <div v-for="activity in recentActivity" :key="activity.id" class="activity-item">
           <div class="activity-icon" :class="activity.type">
@@ -213,106 +224,61 @@
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useAuctionStore, type Auction } from '@/stores/auction'
+import { useDashboardStore } from '@/stores/dashboard'
+import SessionNavigation from '@/components/SessionNavigation.vue'
 
 const authStore = useAuthStore()
 const auctionStore = useAuctionStore()
+const dashboardStore = useDashboardStore()
 
-// Mock data for demonstration
+// Real data from API
 const stats = ref({
-  totalUsers: 15420,
-  userGrowth: 12.5,
-  activeAuctions: 2847,
-  auctionGrowth: 8.3,
-  pendingApprovals: 23,
-  totalValue: 2850000,
-  valueGrowth: 15.2
+  totalUsers: 0,
+  userGrowth: 0,
+  activeAuctions: 0,
+  auctionGrowth: 0,
+  pendingApprovals: 0,
+  totalValue: 0,
+  valueGrowth: 0,
 })
 
-const recentUsers = ref([
-  {
-    id: 1,
-    firstName: 'John',
-    lastName: 'Smith',
-    email: 'john.smith@example.com',
-    role: 'buyer',
-    status: 'active'
-  },
-  {
-    id: 2,
-    firstName: 'Sarah',
-    lastName: 'Johnson',
-    email: 'sarah.johnson@example.com',
-    role: 'seller',
-    status: 'active'
-  },
-  {
-    id: 3,
-    firstName: 'Mike',
-    lastName: 'Davis',
-    email: 'mike.davis@example.com',
-    role: 'buyer',
-    status: 'suspended'
-  }
-])
+const recentUsers = ref<any[]>([])
 
 const recentAuctions = ref<Auction[]>([])
-const recentActivity = ref([
-  {
-    id: 1,
-    type: 'user',
-    title: 'New user registered',
-    timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    user: 'john.smith@example.com'
-  },
-  {
-    id: 2,
-    type: 'auction',
-    title: 'Auction created',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    user: 'sarah.johnson@example.com'
-  },
-  {
-    id: 3,
-    type: 'bid',
-    title: 'High-value bid placed',
-    timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    user: 'mike.davis@example.com'
-  },
-  {
-    id: 4,
-    type: 'system',
-    title: 'System backup completed',
-    timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
-  }
-])
+const recentActivity = ref<any[]>([])
 
 const getUserInitials = (user: any) => {
-  return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+  return `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase()
 }
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
-  
+
   const minutes = Math.floor(diff / (1000 * 60))
   const hours = Math.floor(diff / (1000 * 60 * 60))
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  
+
   if (minutes < 60) return `${minutes}m ago`
   if (hours < 24) return `${hours}h ago`
   if (days < 7) return `${days}d ago`
-  
+
   return date.toLocaleDateString()
 }
 
 const getActivityIcon = (type: string) => {
   switch (type) {
-    case 'user': return '👤'
-    case 'auction': return '🏷️'
-    case 'bid': return '💰'
-    case 'system': return '⚙️'
-    default: return '📝'
+    case 'user':
+      return '👤'
+    case 'auction':
+      return '🏷️'
+    case 'bid':
+      return '💰'
+    case 'system':
+      return '⚙️'
+    default:
+      return '📝'
   }
 }
 
@@ -338,10 +304,29 @@ const suspendAuction = (auctionId: string) => {
 
 onMounted(async () => {
   try {
-    await auctionStore.fetchAuctions()
-    recentAuctions.value = auctionStore.auctions.slice(0, 5)
+    // Load admin dashboard data
+    const adminData = await dashboardStore.fetchAdminDashboard()
+
+    // Update stats with real data
+    stats.value = {
+      totalUsers: adminData.platform_stats.total_users,
+      userGrowth: 12.5, // This would come from analytics API
+      activeAuctions: adminData.platform_stats.active_auctions,
+      auctionGrowth: 8.3, // This would come from analytics API
+      pendingApprovals: adminData.platform_stats.pending_auctions,
+      totalValue: adminData.platform_stats.total_value,
+      valueGrowth: 15.2, // This would come from analytics API
+    }
+
+    // Update recent users and auctions
+    recentUsers.value = adminData.recent_users
+    recentAuctions.value = adminData.recent_auctions
+
+    // Load recent activity
+    await dashboardStore.fetchRecentActivity()
+    recentActivity.value = dashboardStore.recentActivity
   } catch (error) {
-    console.error('Failed to load auctions:', error)
+    console.error('Failed to load admin dashboard:', error)
   }
 })
 </script>
@@ -350,7 +335,7 @@ onMounted(async () => {
 .admin-dashboard {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 2rem;
 }
 
 .dashboard-header {
@@ -361,12 +346,12 @@ onMounted(async () => {
 .dashboard-header h1 {
   font-size: 2.5rem;
   font-weight: bold;
-  color: var(--color-heading);
+  color: #2c3e50;
   margin-bottom: 0.5rem;
 }
 
 .dashboard-header p {
-  color: var(--color-text);
+  color: #7f8c8d;
   font-size: 1.125rem;
 }
 
@@ -378,19 +363,21 @@ onMounted(async () => {
 }
 
 .stat-card {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 1.5rem;
   display: flex;
   align-items: center;
   gap: 1rem;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .stat-icon {
@@ -411,12 +398,12 @@ onMounted(async () => {
 .stat-number {
   font-size: 1.875rem;
   font-weight: bold;
-  color: var(--color-heading);
+  color: #2c3e50;
   margin-bottom: 0.25rem;
 }
 
 .stat-label {
-  color: var(--color-text);
+  color: #7f8c8d;
   font-size: 0.875rem;
   margin-bottom: 0.5rem;
 }
@@ -446,21 +433,23 @@ onMounted(async () => {
 }
 
 .action-card {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 1.5rem;
   display: flex;
   align-items: center;
   gap: 1rem;
   text-decoration: none;
   color: inherit;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .action-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .action-icon {
@@ -475,14 +464,14 @@ onMounted(async () => {
 }
 
 .action-content h3 {
-  color: var(--color-heading);
+  color: #2c3e50;
   font-size: 1.125rem;
   font-weight: 600;
   margin-bottom: 0.25rem;
 }
 
 .action-content p {
-  color: var(--color-text);
+  color: #7f8c8d;
   font-size: 0.875rem;
 }
 
@@ -500,18 +489,18 @@ onMounted(async () => {
 .section-header h2 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: var(--color-heading);
+  color: #2c3e50;
 }
 
 .view-all {
-  color: var(--color-heading);
+  color: #3498db;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s;
 }
 
 .view-all:hover {
-  color: #1a202c;
+  color: #2980b9;
 }
 
 .users-list,
@@ -801,27 +790,27 @@ onMounted(async () => {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .quick-actions {
     grid-template-columns: 1fr;
   }
-  
+
   .user-item,
   .auction-item {
     grid-template-columns: 1fr;
     text-align: center;
     gap: 1rem;
   }
-  
+
   .user-actions,
   .auction-actions {
     justify-content: center;
   }
-  
+
   .health-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .section-header {
     flex-direction: column;
     gap: 1rem;

@@ -50,12 +50,21 @@ export interface Auction {
 
 export interface Bid {
   id: string
-  auctionId: string
-  bidderId: number
-  bidderName: string
   amount: number
-  timestamp: string
-  auctionTitle?: string
+  status: string
+  created_at: string
+  auction_id: string
+  auction_title?: string
+  auction_image?: string
+  auction_end_date?: string
+  bidder?: {
+    id: string
+    first_name: string
+    last_name: string
+    email: string
+  }
+  is_winning: boolean
+  is_outbid: boolean
 }
 
 export interface CreateAuctionData {
@@ -77,6 +86,7 @@ export const useAuctionStore = defineStore('auction', () => {
   const auctions = ref<Auction[]>([])
   const currentAuction = ref<Auction | null>(null)
   const loading = ref(false)
+  const myBids = ref<Bid[]>([])
   const error = ref<string | null>(null)
   const filters = ref({
     search: '',
@@ -84,53 +94,71 @@ export const useAuctionStore = defineStore('auction', () => {
     status: '',
     minPrice: '',
     maxPrice: '',
-    condition: ''
+    condition: '',
   })
 
   const authStore = useAuthStore()
 
   // Computed properties
-  const activeAuctions = computed(() => 
-    auctions.value.filter(auction => auction.status === 'active')
+  const activeAuctions = computed(() =>
+    auctions.value.filter((auction) => auction.status === 'active' || auction.status === 'pending'),
   )
 
-  const myAuctions = computed(() => 
-    auctions.value.filter(auction => auction.seller.id === authStore.user?.id)
+  const myAuctions = computed(() =>
+    auctions.value.filter((auction) => auction.seller.id === authStore.user?.id),
   )
 
-  const myBids = computed(() => {
-    // This will be handled by the bids API instead
-    return []
-  })
+  const fetchMyBids = async (auctionId: string) => {
+    loading.value = true
+    error.value = null
+    console.log('DBG00100:::', auctionId)
+    try {
+      const response = await auctionsAPI.getBids(auctionId) // Fixed: use auctionsAPI.getBids instead of bidsAPI.getMyBids
+      console.log('DBG00200:::', response)
+      myBids.value = response.data.bids || [] // Fixed: use 'bids' instead of 'myBids'
+      console.log('DBG00300:::', myBids.value)
+      return myBids.value
+    } catch (err: any) {
+      error.value = err.response?.data?.error || 'Failed to fetch my bids'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
 
   const filteredAuctions = computed(() => {
     let filtered = auctions.value
 
     if (filters.value.search) {
-      filtered = filtered.filter(auction => 
-        auction.title.toLowerCase().includes(filters.value.search.toLowerCase()) ||
-        auction.description.toLowerCase().includes(filters.value.search.toLowerCase())
+      filtered = filtered.filter(
+        (auction) =>
+          auction.title.toLowerCase().includes(filters.value.search.toLowerCase()) ||
+          auction.description.toLowerCase().includes(filters.value.search.toLowerCase()),
       )
     }
 
     if (filters.value.category) {
-      filtered = filtered.filter(auction => auction.category === filters.value.category)
+      filtered = filtered.filter((auction) => auction.category === filters.value.category)
     }
 
     if (filters.value.status) {
-      filtered = filtered.filter(auction => auction.status === filters.value.status)
+      filtered = filtered.filter((auction) => auction.status === filters.value.status)
     }
 
     if (filters.value.minPrice) {
-      filtered = filtered.filter(auction => auction.current_price >= Number(filters.value.minPrice))
+      filtered = filtered.filter(
+        (auction) => auction.current_price >= Number(filters.value.minPrice),
+      )
     }
 
     if (filters.value.maxPrice) {
-      filtered = filtered.filter(auction => auction.current_price <= Number(filters.value.maxPrice))
+      filtered = filtered.filter(
+        (auction) => auction.current_price <= Number(filters.value.maxPrice),
+      )
     }
 
     if (filters.value.condition) {
-      filtered = filtered.filter(auction => auction.condition === filters.value.condition)
+      filtered = filtered.filter((auction) => auction.condition === filters.value.condition)
     }
 
     return filtered
@@ -142,7 +170,7 @@ export const useAuctionStore = defineStore('auction', () => {
   const fetchAuctions = async () => {
     loading.value = true
     error.value = null
-    
+
     try {
       const response = await auctionsAPI.getAll()
       auctions.value = response.data.auctions
@@ -158,10 +186,20 @@ export const useAuctionStore = defineStore('auction', () => {
   const fetchAuctionById = async (id: string) => {
     loading.value = true
     error.value = null
-    
+
     try {
       const response = await auctionsAPI.getById(id)
       currentAuction.value = response.data.auction
+
+      // Also fetch bids for this auction
+      try {
+        const bidsResponse = await auctionsAPI.getBids(id)
+        myBids.value = bidsResponse.data.bids || []
+      } catch (bidsError) {
+        console.warn('Failed to fetch bids:', bidsError)
+        myBids.value = []
+      }
+
       return response.data.auction
     } catch (err: any) {
       error.value = err.response?.data?.error || 'Failed to fetch auction details'
@@ -173,10 +211,10 @@ export const useAuctionStore = defineStore('auction', () => {
 
   const createAuction = async (auctionData: CreateAuctionData) => {
     if (!authStore.user) throw new Error('User not authenticated')
-    
+
     loading.value = true
     error.value = null
-    
+
     try {
       const response = await auctionsAPI.create(auctionData)
       const newAuction = response.data.auction
@@ -193,16 +231,16 @@ export const useAuctionStore = defineStore('auction', () => {
   const updateAuction = async (id: string, auctionData: Partial<CreateAuctionData>) => {
     loading.value = true
     error.value = null
-    
+
     try {
       const response = await auctionsAPI.update(id, auctionData)
       const updatedAuction = response.data.auction
-      
-      const index = auctions.value.findIndex(a => a.id === id)
+
+      const index = auctions.value.findIndex((a) => a.id === id)
       if (index !== -1) {
         auctions.value[index] = updatedAuction
       }
-      
+
       return updatedAuction
     } catch (err: any) {
       error.value = err.response?.data?.error || 'Failed to update auction'
@@ -215,11 +253,11 @@ export const useAuctionStore = defineStore('auction', () => {
   const deleteAuction = async (id: string) => {
     loading.value = true
     error.value = null
-    
+
     try {
       await auctionsAPI.delete(id)
-      
-      const index = auctions.value.findIndex(a => a.id === id)
+
+      const index = auctions.value.findIndex((a) => a.id === id)
       if (index !== -1) {
         auctions.value.splice(index, 1)
       }
@@ -233,38 +271,30 @@ export const useAuctionStore = defineStore('auction', () => {
 
   const placeBid = async (auctionId: string, amount: number) => {
     if (!authStore.user) throw new Error('User not authenticated')
-    
+
     loading.value = true
     error.value = null
-    
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      const auction = auctions.value.find(a => a.id === auctionId)
-      if (!auction) throw new Error('Auction not found')
-      
-      if (auction.status !== 'active') throw new Error('Auction is not active')
-      if (amount <= auction.currentPrice) throw new Error('Bid must be higher than current price')
-      
-      const newBid: Bid = {
-        id: String(Date.now()),
-        auctionId,
-        bidderId: authStore.user.id,
-        bidderName: `${authStore.user.firstName} ${authStore.user.lastName}`,
-        amount,
-        timestamp: new Date().toISOString()
+      // Call the actual API with proper data structure
+      const response = await bidsAPI.placeBid(auctionId, { amount })
+
+      // Update the current auction if it's the one being bid on
+      if (currentAuction.value?.id === auctionId) {
+        await fetchAuctionById(auctionId)
       }
-      
-      auction.bids.push(newBid)
-      auction.currentPrice = amount
-      auction.bidCount++
-      auction.totalBids++
-      
-      return newBid
-    } catch (err) {
-      error.value = 'Failed to place bid'
-      throw err
+
+      // Update the auction in the list if it exists
+      const auctionIndex = auctions.value.findIndex((a) => a.id === auctionId)
+      if (auctionIndex !== -1) {
+        await fetchAuctions() // Refresh the list
+      }
+
+      return response
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to place bid'
+      error.value = errorMessage
+      throw new Error(errorMessage)
     } finally {
       loading.value = false
     }
@@ -281,7 +311,7 @@ export const useAuctionStore = defineStore('auction', () => {
       status: '',
       minPrice: '',
       maxPrice: '',
-      condition: ''
+      condition: '',
     }
   }
 
@@ -302,6 +332,6 @@ export const useAuctionStore = defineStore('auction', () => {
     deleteAuction,
     placeBid,
     updateFilters,
-    clearFilters
+    clearFilters,
   }
 })

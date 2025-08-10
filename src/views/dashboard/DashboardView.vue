@@ -1,9 +1,9 @@
 <template>
   <div class="dashboard">
-    <div class="loading-container" v-if="loading">
-      <div class="loading-spinner"></div>
-      <p>Loading your dashboard...</p>
-    </div>
+    <!-- Session Navigation -->
+    <SessionNavigation />
+
+    <DashboardLoading v-if="loading" />
   </div>
 </template>
 
@@ -11,6 +11,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import DashboardLoading from '@/components/DashboardLoading.vue'
+import SessionNavigation from '@/components/SessionNavigation.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -22,7 +24,7 @@ onMounted(async () => {
     if (!authStore.user && authStore.token) {
       await authStore.fetchUser()
     }
-    
+
     // Redirect to appropriate dashboard based on user role
     if (authStore.isAdmin) {
       router.replace('/admin-dashboard')
@@ -46,33 +48,5 @@ onMounted(async () => {
 <style scoped>
 .dashboard {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.loading-container {
-  text-align: center;
-}
-
-.loading-spinner {
-  width: 3rem;
-  height: 3rem;
-  border: 3px solid var(--color-border);
-  border-top: 3px solid var(--color-heading);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 1rem;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.loading-container p {
-  color: var(--color-text);
-  font-size: 1.125rem;
 }
 </style>

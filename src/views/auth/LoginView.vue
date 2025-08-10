@@ -16,7 +16,7 @@
             required
             :disabled="authStore.loading"
             class="form-input"
-            :class="{ 'error': errors.email }"
+            :class="{ error: errors.email }"
             placeholder="Enter your email"
           />
           <span v-if="errors.email" class="error-message">{{ errors.email }}</span>
@@ -31,7 +31,7 @@
             required
             :disabled="authStore.loading"
             class="form-input"
-            :class="{ 'error': errors.password }"
+            :class="{ error: errors.password }"
             placeholder="Enter your password"
           />
           <span v-if="errors.password" class="error-message">{{ errors.password }}</span>
@@ -45,11 +45,7 @@
           <a href="#" class="forgot-password">Forgot password?</a>
         </div>
 
-        <button
-          type="submit"
-          :disabled="authStore.loading"
-          class="btn btn-primary btn-full"
-        >
+        <button type="submit" :disabled="authStore.loading" class="btn btn-primary btn-full">
           <span v-if="authStore.loading" class="loading-spinner"></span>
           {{ authStore.loading ? 'Signing in...' : 'Sign In' }}
         </button>
@@ -64,22 +60,6 @@
           Don't have an account?
           <router-link to="/register" class="link">Sign up</router-link>
         </p>
-      </div>
-
-      <!-- Demo accounts info -->
-      <div class="demo-info">
-        <h3>Demo Accounts</h3>
-        <div class="demo-accounts">
-          <div class="demo-account">
-            <strong>Buyer:</strong> buyer@example.com / password123
-          </div>
-          <div class="demo-account">
-            <strong>Seller:</strong> seller@example.com / password123
-          </div>
-          <div class="demo-account">
-            <strong>Admin:</strong> admin@example.com / password123
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -96,12 +76,12 @@ const authStore = useAuthStore()
 
 const form = reactive({
   email: '',
-  password: ''
+  password: '',
 })
 
 const errors = reactive({
   email: '',
-  password: ''
+  password: '',
 })
 
 const rememberMe = ref(false)
@@ -131,7 +111,7 @@ const handleLogin = async () => {
   try {
     await authStore.login({
       email: form.email,
-      password: form.password
+      password: form.password,
     })
 
     // Redirect to intended page or appropriate dashboard
@@ -163,7 +143,11 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
-  background: linear-gradient(135deg, var(--color-background-soft) 0%, var(--color-background) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-background-soft) 0%,
+    var(--color-background) 100%
+  );
 }
 
 .login-card {
@@ -214,7 +198,9 @@ const handleLogin = async () => {
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   font-size: 1rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
   background: var(--color-background);
   color: var(--color-text);
 }
@@ -257,7 +243,7 @@ const handleLogin = async () => {
   color: var(--color-text);
 }
 
-.checkbox-label input[type="checkbox"] {
+.checkbox-label input[type='checkbox'] {
   width: 1rem;
   height: 1rem;
 }
@@ -388,7 +374,7 @@ const handleLogin = async () => {
   .login-card {
     padding: 2rem 1.5rem;
   }
-  
+
   .form-options {
     flex-direction: column;
     gap: 1rem;

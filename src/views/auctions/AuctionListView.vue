@@ -1,5 +1,8 @@
 <template>
   <div class="auction-list">
+    <!-- Session Navigation -->
+    <SessionNavigation />
+
     <div class="page-header">
       <h1>Browse Auctions</h1>
       <p>Discover amazing items up for auction</p>
@@ -15,9 +18,7 @@
           class="search-input"
           @input="handleSearch"
         />
-        <button @click="handleSearch" class="search-btn">
-          🔍
-        </button>
+        <button @click="handleSearch" class="search-btn">🔍</button>
       </div>
 
       <div class="filters">
@@ -47,10 +48,10 @@
 
         <select v-model="sortBy" @change="applyFilters" class="filter-select">
           <option value="endDate">Ending Soon</option>
-          <option value="currentPrice">Price: Low to High</option>
-          <option value="currentPrice-desc">Price: High to Low</option>
-          <option value="totalBids">Most Bids</option>
-          <option value="startDate">Newest</option>
+          <option value="current_price">Price: Low to High</option>
+          <option value="current_price-desc">Price: High to Low</option>
+          <option value="bid_count">Most Bids</option>
+          <option value="start_date">Newest</option>
         </select>
       </div>
 
@@ -72,9 +73,7 @@
             @input="applyFilters"
           />
         </div>
-        <button @click="clearFilters" class="clear-filters-btn">
-          Clear Filters
-        </button>
+        <button @click="clearFilters" class="clear-filters-btn">Clear Filters</button>
       </div>
     </div>
 
@@ -97,16 +96,10 @@
           {{ filteredAuctions.length }} auction{{ filteredAuctions.length !== 1 ? 's' : '' }} found
         </p>
         <div class="view-toggle">
-          <button
-            @click="viewMode = 'grid'"
-            :class="['view-btn', { active: viewMode === 'grid' }]"
-          >
+          <button @click="viewMode = 'grid'" :class="['view-btn', { active: viewMode === 'grid' }]">
             Grid
           </button>
-          <button
-            @click="viewMode = 'list'"
-            :class="['view-btn', { active: viewMode === 'list' }]"
-          >
+          <button @click="viewMode = 'list'" :class="['view-btn', { active: viewMode === 'list' }]">
             List
           </button>
         </div>
@@ -114,11 +107,7 @@
 
       <!-- Grid View -->
       <div v-if="viewMode === 'grid'" class="auctions-grid">
-        <div
-          v-for="auction in paginatedAuctions"
-          :key="auction.id"
-          class="auction-card"
-        >
+        <div v-for="auction in paginatedAuctions" :key="auction.id" class="auction-card">
           <div class="auction-image">
             <img :src="auction.images[0]" :alt="auction.title" />
             <div class="auction-status" :class="auction.status">
@@ -133,19 +122,17 @@
           <div class="auction-content">
             <h3 class="auction-title">
               <router-link :to="`/auctions/${auction.id}`">
-                {{ auction.title }}
+                {{ auction.start_date }}
               </router-link>
             </h3>
-            <p class="auction-description">
-              {{ auction.description.substring(0, 100) }}...
-            </p>
+            <p class="auction-description">{{ auction.description }}...</p>
             <div class="auction-meta">
               <div class="auction-price">
-                <span class="current-price">${{ auction.currentPrice.toLocaleString() }}</span>
-                <span class="bid-count">{{ auction.totalBids }} bids</span>
+                <span class="current-price">${{ auction.current_price }}</span>
+                <span class="bid-count">{{ auction.bid_count }} bids</span>
               </div>
               <div class="auction-time">
-                <span class="time-left">Ends in {{ formatTimeLeft(auction.endDate) }}</span>
+                <span class="time-left">Ends in {{ formatTimeLeft(auction.end_date) }}</span>
               </div>
             </div>
             <div class="auction-footer">
@@ -158,11 +145,7 @@
 
       <!-- List View -->
       <div v-else class="auctions-list">
-        <div
-          v-for="auction in paginatedAuctions"
-          :key="auction.id"
-          class="auction-item"
-        >
+        <div v-for="auction in paginatedAuctions" :key="auction.id" class="auction-item">
           <div class="auction-item-image">
             <img :src="auction.images[0]" :alt="auction.title" />
             <div class="auction-status" :class="auction.status">
@@ -175,9 +158,7 @@
                 {{ auction.title }}
               </router-link>
             </h3>
-            <p class="auction-description">
-              {{ auction.description.substring(0, 150) }}...
-            </p>
+            <p class="auction-description">{{ auction.description.substring(0, 150) }}...</p>
             <div class="auction-details">
               <div class="detail-item">
                 <span class="label">Current Price:</span>
@@ -212,14 +193,10 @@
 
       <!-- Pagination -->
       <div v-if="totalPages > 1" class="pagination">
-        <button
-          @click="currentPage--"
-          :disabled="currentPage === 1"
-          class="pagination-btn"
-        >
+        <button @click="currentPage--" :disabled="currentPage === 1" class="pagination-btn">
           Previous
         </button>
-        
+
         <div class="page-numbers">
           <button
             v-for="page in visiblePages"
@@ -230,7 +207,7 @@
             {{ page }}
           </button>
         </div>
-        
+
         <button
           @click="currentPage++"
           :disabled="currentPage === totalPages"
@@ -247,6 +224,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuctionStore } from '@/stores/auction'
+import SessionNavigation from '@/components/SessionNavigation.vue'
 
 const route = useRoute()
 const auctionStore = useAuctionStore()
@@ -272,49 +250,50 @@ const filteredAuctions = computed(() => {
   // Apply search filter
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(auction =>
-      auction.title.toLowerCase().includes(query) ||
-      auction.description.toLowerCase().includes(query)
+    filtered = filtered.filter(
+      (auction) =>
+        auction.title.toLowerCase().includes(query) ||
+        auction.description?.toLowerCase().includes(query),
     )
   }
 
   // Apply category filter
   if (selectedCategory.value) {
-    filtered = filtered.filter(auction => auction.category === selectedCategory.value)
+    filtered = filtered.filter((auction) => auction.category === selectedCategory.value)
   }
 
   // Apply status filter
   if (selectedStatus.value) {
-    filtered = filtered.filter(auction => auction.status === selectedStatus.value)
+    filtered = filtered.filter((auction) => auction.status === selectedStatus.value)
   }
 
   // Apply condition filter
   if (selectedCondition.value) {
-    filtered = filtered.filter(auction => auction.condition === selectedCondition.value)
+    filtered = filtered.filter((auction) => auction.condition === selectedCondition.value)
   }
 
   // Apply price filters
   if (minPrice.value) {
-    filtered = filtered.filter(auction => auction.currentPrice >= Number(minPrice.value))
+    filtered = filtered.filter((auction) => auction.current_price >= Number(minPrice.value))
   }
   if (maxPrice.value) {
-    filtered = filtered.filter(auction => auction.currentPrice <= Number(maxPrice.value))
+    filtered = filtered.filter((auction) => auction.current_price <= Number(maxPrice.value))
   }
 
   // Apply sorting
   filtered.sort((a, b) => {
     switch (sortBy.value) {
-      case 'currentPrice':
-        return a.currentPrice - b.currentPrice
-      case 'currentPrice-desc':
-        return b.currentPrice - a.currentPrice
-      case 'totalBids':
-        return b.totalBids - a.totalBids
-      case 'startDate':
-        return new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+      case 'current_price':
+        return a.current_price - b.current_price
+      case 'current_price-desc':
+        return b.current_price - a.current_price
+      case 'bid_count':
+        return b.bid_count - a.bid_count
+      case 'start_date':
+        return new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
       case 'endDate':
       default:
-        return new Date(a.endDate).getTime() - new Date(b.endDate).getTime()
+        return new Date(a.end_date).getTime() - new Date(b.end_date).getTime()
     }
   })
 
@@ -334,15 +313,15 @@ const visiblePages = computed(() => {
   const maxVisible = 5
   let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2))
   let end = Math.min(totalPages.value, start + maxVisible - 1)
-  
+
   if (end - start + 1 < maxVisible) {
     start = Math.max(1, end - maxVisible + 1)
   }
-  
+
   for (let i = start; i <= end; i++) {
     pages.push(i)
   }
-  
+
   return pages
 })
 
@@ -368,7 +347,7 @@ const applyFilters = () => {
     status: selectedStatus.value,
     condition: selectedCondition.value,
     minPrice: minPrice.value,
-    maxPrice: maxPrice.value
+    maxPrice: maxPrice.value,
   })
 }
 
@@ -388,13 +367,13 @@ const formatTimeLeft = (endDate: string) => {
   const end = new Date(endDate)
   const now = new Date()
   const diff = end.getTime() - now.getTime()
-  
+
   if (diff <= 0) return 'Ended'
-  
+
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-  
+
   if (days > 0) return `${days}d ${hours}h`
   if (hours > 0) return `${hours}h ${minutes}m`
   if (minutes > 0) return `${minutes}m`
@@ -402,12 +381,16 @@ const formatTimeLeft = (endDate: string) => {
 }
 
 // Watch for route changes to apply category filter from URL
-watch(() => route.query.category, (newCategory) => {
-  if (newCategory) {
-    selectedCategory.value = newCategory as string
-    applyFilters()
-  }
-}, { immediate: true })
+watch(
+  () => route.query.category,
+  (newCategory) => {
+    if (newCategory) {
+      selectedCategory.value = newCategory as string
+      applyFilters()
+    }
+  },
+  { immediate: true },
+)
 
 onMounted(() => {
   loadAuctions()
@@ -418,7 +401,7 @@ onMounted(() => {
 .auction-list {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 2rem;
 }
 
 .page-header {
@@ -429,19 +412,19 @@ onMounted(() => {
 .page-header h1 {
   font-size: 2.5rem;
   font-weight: bold;
-  color: var(--color-heading);
+  color: #2c3e50;
   margin-bottom: 0.5rem;
 }
 
 .page-header p {
-  color: var(--color-text);
+  color: #7f8c8d;
   font-size: 1.125rem;
 }
 
 .filters-section {
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -603,16 +586,18 @@ onMounted(() => {
 }
 
 .auction-card {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .auction-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .auction-image {
@@ -754,7 +739,9 @@ onMounted(() => {
   border: 1px solid var(--color-border);
   border-radius: 1rem;
   padding: 1.5rem;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .auction-item:hover {
@@ -908,31 +895,31 @@ onMounted(() => {
   .filters {
     grid-template-columns: 1fr;
   }
-  
+
   .price-filter {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .price-inputs {
     justify-content: center;
   }
-  
+
   .auction-item {
     grid-template-columns: 1fr;
     text-align: center;
   }
-  
+
   .auction-item-actions {
     flex-direction: row;
     justify-content: center;
   }
-  
+
   .pagination {
     flex-direction: column;
     gap: 1rem;
   }
-  
+
   .page-numbers {
     order: -1;
   }

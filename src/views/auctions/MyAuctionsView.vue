@@ -85,9 +85,7 @@
           <option value="price">Price</option>
         </select>
 
-        <button @click="clearFilters" class="btn btn-outline">
-          Clear Filters
-        </button>
+        <button @click="clearFilters" class="btn btn-outline">Clear Filters</button>
       </div>
     </div>
 
@@ -100,18 +98,24 @@
     <div v-else-if="filteredAuctions.length === 0" class="empty-state">
       <div class="empty-icon">📦</div>
       <h3>No auctions found</h3>
-      <p>{{ filters.search || filters.status || filters.category ? 'Try adjusting your filters' : 'Start by creating your first auction' }}</p>
-      <router-link v-if="!filters.search && !filters.status && !filters.category" to="/create-auction" class="btn btn-primary">
+      <p>
+        {{
+          filters.search || filters.status || filters.category
+            ? 'Try adjusting your filters'
+            : 'Start by creating your first auction'
+        }}
+      </p>
+      <router-link
+        v-if="!filters.search && !filters.status && !filters.category"
+        to="/create-auction"
+        class="btn btn-primary"
+      >
         Create Your First Auction
       </router-link>
     </div>
 
     <div v-else class="auctions-grid">
-      <div
-        v-for="auction in filteredAuctions"
-        :key="auction.id"
-        class="auction-card"
-      >
+      <div v-for="auction in filteredAuctions" :key="auction.id" class="auction-card">
         <div class="auction-image">
           <img :src="auction.images[0] || '/placeholder-image.jpg'" :alt="auction.title" />
           <div class="auction-status" :class="auction.status">
@@ -121,12 +125,12 @@
 
         <div class="auction-content">
           <h3 class="auction-title">{{ auction.title }}</h3>
-          <p class="auction-description">{{ auction.description.substring(0, 100) }}...</p>
-          
+          <p class="auction-description">{{ auction.description }}...</p>
+
           <div class="auction-details">
             <div class="detail-item">
               <span class="detail-label">Current Price:</span>
-              <span class="detail-value price">${{ auction.currentPrice.toLocaleString() }}</span>
+              <span class="detail-value price">${{ auction.currentPrice }}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Bids:</span>
@@ -142,12 +146,8 @@
             <router-link :to="`/auctions/${auction.id}`" class="btn btn-outline btn-sm">
               View Details
             </router-link>
-            <button @click="editAuction(auction)" class="btn btn-outline btn-sm">
-              Edit
-            </button>
-            <button @click="deleteAuction(auction.id)" class="btn btn-danger btn-sm">
-              Delete
-            </button>
+            <button @click="editAuction(auction)" class="btn btn-outline btn-sm">Edit</button>
+            <button @click="deleteAuction(auction.id)" class="btn btn-danger btn-sm">Delete</button>
           </div>
         </div>
       </div>
@@ -155,14 +155,10 @@
 
     <!-- Pagination -->
     <div v-if="totalPages > 1" class="pagination">
-      <button
-        @click="currentPage--"
-        :disabled="currentPage === 1"
-        class="pagination-btn"
-      >
+      <button @click="currentPage--" :disabled="currentPage === 1" class="pagination-btn">
         Previous
       </button>
-      
+
       <div class="page-numbers">
         <button
           v-for="page in visiblePages"
@@ -173,12 +169,8 @@
           {{ page }}
         </button>
       </div>
-      
-      <button
-        @click="currentPage++"
-        :disabled="currentPage === totalPages"
-        class="pagination-btn"
-      >
+
+      <button @click="currentPage++" :disabled="currentPage === totalPages" class="pagination-btn">
         Next
       </button>
     </div>
@@ -201,18 +193,18 @@ const filters = reactive({
   search: '',
   status: '',
   category: '',
-  sortBy: 'created'
+  sortBy: 'created',
 })
 
 const stats = computed(() => {
   const myAuctions = auctionStore.myAuctions
   return {
     total: myAuctions.length,
-    active: myAuctions.filter(a => a.status === 'active').length,
-    completed: myAuctions.filter(a => a.status === 'ended').length,
+    active: myAuctions.filter((a) => a.status === 'active').length,
+    completed: myAuctions.filter((a) => a.status === 'ended').length,
     totalRevenue: myAuctions
-      .filter(a => a.status === 'ended')
-      .reduce((sum, a) => sum + a.currentPrice, 0)
+      .filter((a) => a.status === 'ended')
+      .reduce((sum, a) => sum + a.currentPrice, 0),
   }
 })
 
@@ -220,18 +212,19 @@ const filteredAuctions = computed(() => {
   let filtered = auctionStore.myAuctions
 
   if (filters.search) {
-    filtered = filtered.filter(auction =>
-      auction.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-      auction.description.toLowerCase().includes(filters.search.toLowerCase())
+    filtered = filtered.filter(
+      (auction) =>
+        auction.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+        auction.description.toLowerCase().includes(filters.search.toLowerCase()),
     )
   }
 
   if (filters.status) {
-    filtered = filtered.filter(auction => auction.status === filters.status)
+    filtered = filtered.filter((auction) => auction.status === filters.status)
   }
 
   if (filters.category) {
-    filtered = filtered.filter(auction => auction.category === filters.category)
+    filtered = filtered.filter((auction) => auction.category === filters.category)
   }
 
   // Sort
@@ -257,11 +250,11 @@ const visiblePages = computed(() => {
   const pages = []
   const start = Math.max(1, currentPage.value - 2)
   const end = Math.min(totalPages.value, currentPage.value + 2)
-  
+
   for (let i = start; i <= end; i++) {
     pages.push(i)
   }
-  
+
   return pages
 })
 
@@ -269,12 +262,12 @@ const formatTimeLeft = (endDate: string) => {
   const now = new Date()
   const end = new Date(endDate)
   const diff = end.getTime() - now.getTime()
-  
+
   if (diff <= 0) return 'Ended'
-  
+
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-  
+
   if (days > 0) return `${days}d ${hours}h`
   if (hours > 0) return `${hours}h`
   return 'Less than 1h'
@@ -522,7 +515,9 @@ onMounted(async () => {
   border-radius: 12px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .auction-card:hover {
@@ -678,25 +673,25 @@ onMounted(async () => {
   .my-auctions {
     padding: 1rem;
   }
-  
+
   .my-auctions-header {
     flex-direction: column;
     gap: 1rem;
     text-align: center;
   }
-  
+
   .stats-overview {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .filter-controls {
     flex-direction: column;
   }
-  
+
   .auctions-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .pagination {
     flex-direction: column;
     gap: 0.5rem;
