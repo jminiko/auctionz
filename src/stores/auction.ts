@@ -75,8 +75,9 @@ export interface CreateAuctionData {
   buy_now_price?: number
   category: string
   condition: string
+  duration: number
   end_date: string
-  images: string[]
+  images: File[]
   location: string
   shipping_cost: number
   terms?: string
@@ -216,7 +217,39 @@ export const useAuctionStore = defineStore('auction', () => {
     error.value = null
 
     try {
-      const response = await auctionsAPI.create(auctionData)
+      // Create FormData for file upload
+      const formData = new FormData()
+
+      // Add text fields
+      formData.append('title', auctionData.title)
+      formData.append('description', auctionData.description)
+      formData.append('category', auctionData.category)
+      formData.append('condition', auctionData.condition)
+      formData.append('starting_price', auctionData.starting_price.toString())
+      formData.append('duration', auctionData.duration.toString())
+      formData.append('location', auctionData.location)
+      formData.append('shipping_cost', auctionData.shipping_cost.toString())
+
+      // Add optional fields
+      if (auctionData.reserve_price) {
+        formData.append('reserve_price', auctionData.reserve_price.toString())
+      }
+      if (auctionData.buy_now_price) {
+        formData.append('buy_now_price', auctionData.buy_now_price.toString())
+      }
+      if (auctionData.terms) {
+        formData.append('terms', auctionData.terms)
+      }
+
+      // Add image files
+      if (auctionData.images && auctionData.images.length > 0) {
+        auctionData.images.forEach((image) => {
+          formData.append('images', image)
+        })
+      }
+
+      // Make API call with FormData
+      const response = await auctionsAPI.create(formData)
       const newAuction = response.data.auction
       auctions.value.unshift(newAuction)
       return newAuction

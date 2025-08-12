@@ -18,7 +18,7 @@
         </div>
         <div class="image-thumbnails">
           <button
-            v-for="(image, index) in auction.images"
+            v-for="(image, index) in auctionImages"
             :key="index"
             @click="currentImage = image"
             :class="['thumbnail', { active: currentImage === image }]"
@@ -148,6 +148,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAuctionStore } from '@/stores/auction'
+import { parseAuctionImages } from '@/utils/imageUtils'
 
 const route = useRoute()
 const router = useRouter()
@@ -158,6 +159,12 @@ const currentImage = ref('')
 const bidAmount = ref('')
 
 const auction = computed(() => auctionStore.currentAuction)
+
+// Parse images from JSON string to array with full URLs
+const auctionImages = computed(() => {
+  if (!auction.value?.images) return []
+  return parseAuctionImages(auction.value.images)
+})
 
 const canBid = computed(() => {
   if (!authStore.isAuthenticated) return false
@@ -232,8 +239,9 @@ onMounted(async () => {
   const auctionId = String(route.params.id)
   try {
     await auctionStore.fetchAuctionById(auctionId)
-    if (auction.value?.images.length) {
-      currentImage.value = auction.value.images[0]
+    if (auctionImages.value.length > 0) {
+      // Use the first image from the parsed array
+      currentImage.value = auctionImages.value[0]
     }
   } catch (error) {
     console.error('Failed to load auction:', error)

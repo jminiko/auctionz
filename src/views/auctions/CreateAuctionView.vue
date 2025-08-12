@@ -267,6 +267,19 @@
         </button>
       </div>
     </form>
+
+    <!-- Success Modal -->
+    <SuccessModal
+      :show="showSuccessModal"
+      title="Auction Created Successfully!"
+      :message="successMessage"
+      details="Your auction is now live and visible to potential bidders. You can manage it from your seller dashboard."
+      :show-action="true"
+      action-text="View My Auctions"
+      close-text="Create Another"
+      @close="handleSuccessClose"
+      @action="handleSuccessAction"
+    />
   </div>
 </template>
 
@@ -274,11 +287,21 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuctionStore } from '@/stores/auction'
+import { errorHandler } from '@/services/errorHandler'
+import ErrorModal from '@/components/ErrorModal.vue'
+import SuccessModal from '@/components/SuccessModal.vue'
+import ConfirmationModal from '@/components/ConfirmationModal.vue'
 
 const router = useRouter()
 const auctionStore = useAuctionStore()
 
 const loading = ref(false)
+const showErrorModal = ref(false)
+const showSuccessModal = ref(false)
+const showConfirmationModal = ref(false)
+const errorMessage = ref('')
+const errorDetails = ref('')
+const successMessage = ref('')
 
 const form = reactive({
   title: '',
@@ -304,12 +327,22 @@ const handleImageUpload = (event: Event) => {
   if (files) {
     Array.from(files).forEach((file) => {
       if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be less than 5MB')
+        errorHandler.addError({
+          type: 'error',
+          title: 'File Size Error',
+          message: 'File size must be less than 5MB',
+          details: `File "${file.name}" is ${(file.size / 1024 / 1024).toFixed(2)}MB`,
+        })
         return
       }
 
       if (form.images.length >= 10) {
-        alert('Maximum 10 images allowed')
+        errorHandler.addError({
+          type: 'error',
+          title: 'Too Many Images',
+          message: 'Maximum 10 images allowed',
+          details: 'Please remove some images before adding more',
+        })
         return
       }
 
@@ -329,15 +362,68 @@ const removeImage = (index: number) => {
   form.images.splice(index, 1)
 }
 
-const createAuction = async () => {
+const validateForm = () => {
+  const errors: string[] = []
+
+  if (!form.title.trim()) {
+    errors.push('Title is required')
+  }
+
+  if (!form.description.trim()) {
+    errors.push('Description is required')
+  }
+
+  if (!form.category) {
+    errors.push('Category is required')
+  }
+
+  if (!form.condition) {
+    errors.push('Condition is required')
+  }
+
+  if (form.starting_price <= 0) {
+    errors.push('Starting price must be greater than 0')
+  }
+
+  if (form.reserve_price > 0 && form.reserve_price <= form.starting_price) {
+    errors.push('Reserve price must be greater than starting price')
+  }
+
+  if (form.buy_now_price > 0 && form.buy_now_price <= form.starting_price) {
+    errors.push('Buy now price must be greater than starting price')
+  }
+
+  if (!form.duration) {
+    errors.push('Duration is required')
+  }
+
+  if (!form.location.trim()) {
+    errors.push('Location is required')
+  }
+
   if (!form.agreeToTerms) {
-    alert('Please agree to the terms and conditions')
+    errors.push('You must agree to the terms and conditions')
+  }
+
+  return errors
+}
+
+const createAuction = async () => {
+  const validationErrors = validateForm()
+
+  if (validationErrors.length > 0) {
+    errorHandler.addError({
+      type: 'error',
+      title: 'Validation Error',
+      message: 'Please fix the following errors:',
+      details: validationErrors.join('\n'),
+    })
     return
   }
 
   loading.value = true
+
   try {
-    console.log(form.duration)
     const auctionData = {
       title: form.title,
       description: form.description,
@@ -349,16 +435,17 @@ const createAuction = async () => {
       duration: parseInt(form.duration),
       end_date: new Date(Date.now() + parseInt(form.duration) * 24 * 60 * 60 * 1000).toISOString(),
       location: form.location,
-      shippingCost: form.freeShipping ? 0 : form.shippingCost,
+      shipping_cost: form.freeShipping ? 0 : form.shippingCost,
       terms: form.terms,
       images: form.images.map((img) => img.file),
     }
-    console.log(new Date(Date.now() + parseInt(form.duration) * 24 * 60 * 60 * 1000).toISOString())
+
     await auctionStore.createAuction(auctionData)
-    router.push('/my-auctions')
-  } catch (error) {
-    console.error('Failed to create auction:', error)
-    alert('Failed to create auction. Please try again.' + error)
+
+    successMessage.value = 'Auction created successfully!'
+    showSuccessModal.value = true
+  } catch (error: any) {
+    errorHandler.handleApiError(error, 'Create Auction')
   } finally {
     loading.value = false
   }
@@ -366,16 +453,31 @@ const createAuction = async () => {
 
 const saveDraft = async () => {
   loading.value = true
+
   try {
     // Implement draft saving logic
     console.log('Saving draft...', form)
-    alert('Draft saved successfully!')
-  } catch (error) {
-    console.error('Failed to save draft:', error)
-    alert('Failed to save draft. Please try again.')
+
+    errorHandler.addInfo(
+      'Draft Saved',
+      'Your auction draft has been saved successfully!',
+      'You can continue editing or publish it later.',
+    )
+  } catch (error: any) {
+    errorHandler.handleApiError(error, 'Save Draft')
   } finally {
     loading.value = false
   }
+}
+
+const handleSuccessAction = () => {
+  showSuccessModal.value = false
+  router.push('/my-auctions')
+}
+
+const handleSuccessClose = () => {
+  showSuccessModal.value = false
+  router.push('/my-auctions')
 }
 </script>
 

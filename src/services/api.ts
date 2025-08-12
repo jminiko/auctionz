@@ -85,7 +85,18 @@ export const authAPI = {
 export const auctionsAPI = {
   getAll: (params?: any) => api.get('/auctions/', { params }),
   getById: (id: string) => api.get(`/auctions/${id}`),
-  create: (data: any) => api.post('/auctions/', data),
+  create: (data: any) => {
+    // Check if data is FormData and set appropriate headers
+    if (data instanceof FormData) {
+      return api.post('/auctions/', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+    }
+    // Default JSON request
+    return api.post('/auctions/', data)
+  },
   update: (id: string, data: any) => api.put(`/auctions/${id}`, data),
   delete: (id: string) => api.delete(`/auctions/${id}`),
   getBids: (id: string) => api.get(`/auctions/${id}/bids`),
